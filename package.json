@@ -1,0 +1,26 @@
+{
+  "name": "tencent-channel-manage",
+  "version": "0.1.0",
+  "private": true,
+  "description": "腾讯频道运营助手 - mobile H5 monorepo",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm -w apps/web run dev",
+    "dev:api": "npm -w apps/api run dev",
+    "dev:worker": "npm -w apps/worker run dev",
+    "build": "npm -w packages/db run build && npm -w packages/shared run build && npm -w apps/api run build && npm -w apps/worker run build && npm -w apps/web run build",
+    "db:generate": "npm -w packages/db run prisma:generate",
+    "db:migrate": "npm -w packages/db run prisma:migrate",
+    "db:seed": "npm -w packages/db run seed",
+    "lint": "npm -ws --if-present run lint",
+    "typecheck": "npm -ws --if-present run typecheck",
+    "start:api": "npm -w apps/api run start",
+    "start:worker": "npm -w apps/worker run start"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

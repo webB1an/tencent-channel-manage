@@ -1,0 +1,278 @@
+// Prisma schema for the Tencent Channel mobile H5 MVP.
+// SQLite has no native enums, so enum-like fields are typed as `String` and
+// the canonical value lists live in `@tcm/shared` (see src/enums.ts).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:../../../data/app.db"
+}
+
+/// Auth user. Password is bcrypt-hashed. Encrypted fields live on related rows.
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  /// One of: ADMIN | USER
+  role         String   @default("USER")
+  /// One of: ACTIVE | DISABLED
+  status       String   @default("ACTIVE")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tokens      ChannelToken[]
+  models      ModelConfig[]
+  guilds      Guild[]
+  tasks       Task[]
+  runs        TaskRun[]
+  inspections InspectionResult[]
+  summaries   HotSummary[]
+  audits      AuditLog[]
+
+  @@index([role])
+}
+
+/// Per-user channel token. `encryptedToken` is the user's channel token,
+/// sealed with AES-256-GCM keyed by APP_ENCRYPTION_KEY (see src/crypto.ts).
+/// `tokenTail` holds the last 4 characters of the plaintext for display only
+/// and must never be the full secret. The plaintext never leaves the API
+/// process for the worker (it is passed through a per-job encrypted env var).
+model ChannelToken {
+  id             String    @id @default(cuid())
+  userId         String
+  label          String
+  encryptedToken String
+  /// Last 4 chars of the plaintext token, for display only.
+  tokenTail      String
+  /// One of: ACTIVE | REVOKED | INVALID
+  status         String    @default("ACTIVE")
+  lastCheckedAt  DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guilds Guild[]
+  tasks Task[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+/// Per-user model provider config. The `encryptedApiKey` is the upstream
+/// provider key, sealed with APP_ENCRYPTION_KEY. The plaintext is only
+/// decrypted transiently at the API layer to test the connection; it is
+/// never logged and never sent to the worker.
+model ModelConfig {
+  id              String    @id @default(cuid())
+  userId          String
+  /// One of: openai | deepseek | doubao | custom
+  provider        String
+  /// e.g. gpt-4o-mini
+  model           String
+  baseUrl         String?
+  encryptedApiKey String
+  lastTestedAt    DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks Task[]
+
+  @@index([userId])
+}
+
+/// A guild (QQ 频道 guild) the user has connected. Optional cache row.
+model Guild {
+  id       String   @id @default(cuid())
+  userId   String
+  tokenId  String
+  guildId  String
+  name     String
+  guildNumber String?
+  role     String?
+  memberCount Int?
+  shareUrl String?
+  cachedAt DateTime @default(now())
+
+  user     User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token    ChannelToken @relation(fields: [tokenId], references: [id], onDelete: Cascade)
+  channels Channel[]
+  tasks    Task[]
+
+  @@unique([tokenId, guildId])
+  @@index([userId])
+  @@index([tokenId])
+}
+
+/// A channel under a guild.
+model Channel {
+  id        String   @id @default(cuid())
+  guildId   String
+  channelId String
+  name      String
+  type      String?
+  cachedAt  DateTime @default(now())
+
+  guild Guild  @relation(fields: [guildId], references: [id], onDelete: Cascade)
+  tasks Task[]
+
+  @@unique([guildId, channelId])
+}
+
+/// A logical task the user wants the worker to do, e.g. "inspect this channel
+/// for hot posts every day at 23:30". A task always belongs to a token, and
+/// optionally to a guild / channel. For HOT_SUMMARY tasks the channel is
+/// required at run time; for INSPECTION tasks it is recommended.
+model Task {
+  id String @id @default(cuid())
+
+  userId    String
+  tokenId   String
+  modelId   String?
+  guildId   String?
+  channelId String?
+
+  /// One of: INSPECTION | HOT_SUMMARY
+  type         String
+  /// One of: IMMEDIATE | DAILY
+  scheduleMode String  @default("DAILY")
+  /// HH:mm in 24h. Used when scheduleMode = DAILY. Default 23:30.
+  defaultTime  String  @default("23:30")
+  /// One of: ACTIVE | PAUSED | DISABLED
+  status       String  @default("ACTIVE")
+
+  paramsJson String  @default("{}")
+  enabled    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     ChannelToken @relation(fields: [tokenId], references: [id], onDelete: Cascade)
+  model     ModelConfig? @relation(fields: [modelId], references: [id], onDelete: SetNull)
+  guild     Guild?       @relation(fields: [guildId], references: [id], onDelete: SetNull)
+  channel   Channel?     @relation(fields: [channelId], references: [id], onDelete: SetNull)
+  runs      TaskRun[]
+  summaries HotSummary[]
+
+  @@index([userId])
+  @@index([tokenId])
+  @@index([type, status])
+  @@index([guildId])
+  @@index([channelId])
+}
+
+/// One execution of a Task. The worker writes one row per attempt.
+/// `idempotencyKey` is unique so a producer that retries a queue enqueue
+/// will not create a second run for the same logical work.
+model TaskRun {
+  id             String  @id @default(cuid())
+  taskId         String
+  userId         String
+  /// Producer-supplied stable key; unique across all runs.
+  idempotencyKey String  @unique
+  /// One of: PENDING | RUNNING | SUCCESS | FAILED | TIMEOUT
+  status         String  @default("PENDING")
+  retryCount     Int     @default(0)
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  exitCode       Int?
+  /// JSON-encoded array of log lines captured during the run.
+  logsJson       String  @default("[]")
+  error          String?
+  createdAt      DateTime @default(now())
+
+  task      Task               @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  results   InspectionResult[]
+  summaries HotSummary[]
+
+  @@index([userId])
+  @@index([taskId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+/// Structured result of an "inspect channel for hot posts" run.
+/// `postIdsJson` holds the list of flagged post ids.
+/// `riskTypesJson` is the categorised risk taxonomy (e.g. ["ad","abuse"]).
+/// `status` lets the UI distinguish processed results from pending retries.
+model InspectionResult {
+  id            String   @id @default(cuid())
+  runId         String
+  taskId        String
+  userId        String
+  guildId       String?
+  channelId     String?
+  postId        String
+  title         String?
+  content       String?
+  authorName    String?
+  authorId      String?
+  likeCount     Int      @default(0)
+  commentCount  Int      @default(0)
+  postCreatedAt DateTime?
+  /// JSON array of post ids, e.g. ["abc","def"].
+  postIdsJson   String   @default("[]")
+  /// One of: LOW | MEDIUM | HIGH | CRITICAL
+  riskLevel     String
+  /// JSON array of risk type strings.
+  riskTypesJson String   @default("[]")
+  /// Free-form human readable reason / explanation.
+  reason        String
+  /// One of: PENDING | PROCESSED | IGNORED | FAILED
+  status        String   @default("PENDING")
+  createdAt     DateTime @default(now())
+
+  run  TaskRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  user User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([taskId])
+  @@index([runId])
+  @@unique([taskId, postId])
+  @@index([riskLevel])
+  @@index([createdAt])
+}
+
+/// Cached daily hot summary per (task, date). Surfaced in the mobile
+/// "results" tab. `itemsJson` is a JSON array of summary item objects whose
+/// shape is decided by the worker; the database does not enforce a schema.
+model HotSummary {
+  id        String   @id @default(cuid())
+  taskId    String
+  runId     String
+  userId    String
+  /// YYYY-MM-DD (local date of the user that produced it).
+  date      String
+  /// JSON array of items.
+  itemsJson String   @default("[]")
+  createdAt DateTime @default(now())
+
+  task Task    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  run  TaskRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  user User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, date])
+  @@index([userId, date])
+}
+
+/// Append-only audit log for sensitive actions (login, token create/delete,
+/// task start, model key update). `userId` may be null for system actions.
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  target    String?
+  metaJson  String   @default("{}")
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
