@@ -812,7 +812,7 @@ export function Segmented<T extends string>({ value, onChange, options, classNam
             aria-selected={active}
             onClick={() => onChange(opt.value)}
             className={cn(
-              "tap h-9 rounded text-small font-medium transition-colors duration-180 ease-out-quint",
+              "tap h-9 rounded text-small font-medium transition-colors duration-[180ms] ease-out-quint",
               active ? "bg-ink text-ink-inverse" : "text-ink-2 hover:text-ink",
             )}
           >
@@ -1739,7 +1739,7 @@ export function BottomNav() {
               >
                 <span
                   className={cn(
-                    "flex flex-col items-center justify-center gap-0.5 px-4 py-1.5 rounded-full transition-colors duration-180",
+                    "flex flex-col items-center justify-center gap-0.5 px-4 py-1.5 rounded-full transition-colors duration-[180ms]",
                     active ? "bg-ink text-ink-inverse" : "text-ink-3",
                   )}
                 >
