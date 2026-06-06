@@ -1,9 +1,3 @@
-export type ClassValue = string | number | false | null | undefined;
-
-export function cn(...classes: ClassValue[]): string {
-  return classes.filter(Boolean).join(" ");
-}
-
 const RTF = new Intl.RelativeTimeFormat("zh-CN", { numeric: "auto" });
 
 export function formatRelativeTime(input: Date | string, now: Date = new Date()): string {
