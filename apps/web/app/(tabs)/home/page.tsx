@@ -1,8 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { api } from "@/lib/api";
+import { formatLocalDate } from "@/lib/utils";
 import type { HotSummaryView, InspectionResultView, TaskRunView, TaskView } from "@tcm/shared";
+import { StatCard } from "@/components/patterns/StatCard";
+import { RiskCardCompact } from "@/components/patterns/RiskCardCompact";
+import { HotTopicItem } from "@/components/patterns/HotTopicItem";
+import { EmptyState } from "@/components/patterns/EmptyState";
 
 export default function HomePage() {
   const [tasks, setTasks] = useState<TaskView[]>([]);
@@ -22,89 +28,91 @@ export default function HomePage() {
     })().catch(console.error);
   }, []);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const pending = inspections.filter((i) => i.status === "PENDING");
+  const todayTopics = summaries[0]?.items as Array<{ title?: string; content?: string; likeCount?: number; commentCount?: number; authorName?: string }> | undefined;
 
   return (
-    <main className="px-5 pt-6">
-      <header className="flex items-end justify-between">
-        <div>
-          <p className="text-xs text-ink-soft">{today}</p>
-          <h1 className="mt-1 text-xl font-semibold text-ink">今日运营台</h1>
-        </div>
-        <span className="rounded-full bg-brand-soft px-3 py-1 text-xs text-brand">在线</span>
+    <main className="px-5 pt-8 pb-12">
+      <header>
+        <p className="text-micro tracking-[0.08em] text-ink-3 font-mono">{formatLocalDate()}</p>
+        <h1 className="mt-1.5 text-d2 text-ink">今日运营台</h1>
+        <p className="mt-1 text-body text-ink-2">早上好，{typeof window !== "undefined" ? (localStorage.getItem("tcm_username") ?? "频道主") : "频道主"}。</p>
+        <div className="mt-5 h-px w-8 bg-ink" />
       </header>
 
-      <section className="mt-5 grid grid-cols-3 gap-3">
-        <Stat label="任务" value={String(tasks.length)} />
-        <Stat label="运行中" value={String(running.length)} accent />
-        <Stat label="待处理" value={String(inspections.filter((i) => i.status === "PENDING").length)} />
+      <section className="mt-7 grid grid-cols-3 gap-2.5 stagger">
+        <StatCard label="TASKS" value={tasks.length} hint="全部" />
+        <StatCard label="RUNNING" value={running.length} hint="进行中" accent />
+        <StatCard label="PENDING" value={pending.length} hint="待处理" />
       </section>
 
-      <section className="mt-6 rounded-2xl bg-white p-4 shadow-card">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium text-ink">待处理风险</h2>
-          <a href="/results" className="text-xs text-brand">去处理</a>
+      <section className="mt-9">
+        <div className="flex items-end justify-between">
+          <h2 className="text-h2 text-ink">待处理风险</h2>
+          <span className="text-micro text-ink-3">· {pending.length}</span>
         </div>
-        {inspections.filter((i) => i.status === "PENDING").length === 0 ? (
-          <p className="mt-3 text-sm text-ink-soft">今天暂时没有待处理风险</p>
+        {pending.length === 0 ? (
+          <div className="mt-3 rounded-lg border border-line bg-paper">
+            <EmptyState icon="pulse" title="今天暂时没有待处理风险" />
+          </div>
         ) : (
-          <ul className="mt-3 space-y-2">
-            {inspections.filter((i) => i.status === "PENDING").slice(0, 3).map((i) => (
-              <li key={i.id} className="rounded-xl bg-paper p-3 text-sm text-ink">
-                <p className="font-medium">{i.title || "未命名帖子"}</p>
-                <p className="mt-1 text-xs text-ink-soft">{i.reason}</p>
+          <ul className="mt-3 space-y-2 stagger">
+            {pending.slice(0, 3).map((i) => (
+              <li key={i.id}>
+                <RiskCardCompact inspection={i} />
               </li>
             ))}
           </ul>
         )}
-      </section>
-
-      <section className="mt-6 rounded-2xl bg-white p-4 shadow-card">
-        <h2 className="text-sm font-medium text-ink">今日热门摘要</h2>
-        {summaries.length === 0 ? (
-          <p className="mt-3 text-sm text-ink-soft">
-            还没有数据，先去 <a className="text-brand" href="/tasks">任务</a> 跑一个试试。
-          </p>
-        ) : (
-          <ul className="mt-3 space-y-3">
-            {summaries.map((s) => (
-              <li key={s.id} className="rounded-xl bg-paper p-3 text-sm leading-6 text-ink">
-                {summarizeText(s)}
-              </li>
-            ))}
-          </ul>
+        {pending.length > 0 && (
+          <Link
+            href="/results"
+            className="mt-3 inline-flex items-center gap-1 text-small text-ink-2 hover:text-ink"
+          >
+            去处理 →
+          </Link>
         )}
       </section>
 
-      <section className="mt-6 rounded-2xl bg-white p-4 shadow-card">
-        <h2 className="text-sm font-medium text-ink">快速操作</h2>
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          <a href="/tasks" className="tap rounded-xl bg-brand-soft px-3 py-3 text-center text-sm text-brand">
-            管理任务
-          </a>
-          <a href="/results" className="tap rounded-xl bg-paper px-3 py-3 text-center text-sm text-ink">
-            查看结果
-          </a>
+      <section className="mt-9">
+        <div className="flex items-end justify-between">
+          <h2 className="text-h2 text-ink">今日热门</h2>
+          <span className="text-micro text-ink-3">· {todayTopics?.length ?? 0} 个话题</span>
         </div>
+        {!todayTopics || todayTopics.length === 0 ? (
+          <div className="mt-3 rounded-lg border border-line bg-paper">
+            <EmptyState icon="inbox" title="今天还没有热门汇总" hint="去任务页跑一个试试" />
+          </div>
+        ) : (
+          <div className="mt-3 rounded-lg border border-line bg-paper p-1.5">
+            {todayTopics.slice(0, 3).map((t, idx) => (
+              <HotTopicItem
+                key={idx}
+                rank={idx + 1}
+                title={t.title ?? t.content ?? "未命名"}
+                authorName={t.authorName}
+                likeCount={t.likeCount}
+                commentCount={t.commentCount}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="mt-9 grid grid-cols-2 gap-2.5">
+        <Link
+          href="/tasks"
+          className="tap h-12 rounded-md border border-line bg-paper text-small text-ink inline-flex items-center justify-center hover:bg-paper-2"
+        >
+          管理任务 →
+        </Link>
+        <Link
+          href="/results"
+          className="tap h-12 rounded-md border border-line bg-paper text-small text-ink inline-flex items-center justify-center hover:bg-paper-2"
+        >
+          查看结果 →
+        </Link>
       </section>
     </main>
-  );
-}
-
-function summarizeText(s: HotSummaryView): string {
-  const items = s.items as Array<{ title?: string; content?: string; likeCount?: number }>;
-  if (!items?.length) return "今日暂无热门话题";
-  return items
-    .slice(0, 3)
-    .map((i, index) => `Top${index + 1} ${i.title ?? i.content ?? "未命名"} · ${i.likeCount ?? 0}赞`)
-    .join("  ·  ");
-}
-
-function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
-  return (
-    <div className={"rounded-2xl p-3 shadow-card " + (accent ? "bg-brand text-white" : "bg-white")}>
-      <p className={"text-xs " + (accent ? "text-white/80" : "text-ink-soft")}>{label}</p>
-      <p className="mt-1 text-2xl font-semibold leading-none">{value}</p>
-    </div>
   );
 }
