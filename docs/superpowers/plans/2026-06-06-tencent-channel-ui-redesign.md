@@ -1457,9 +1457,11 @@ const TYPE_LABEL: Record<string, string> = {
   HOT_SUMMARY: "每日热门",
 };
 
-const SCHEDULE_LABEL: Record<string, string> = {
+type ScheduleFormatter = (t?: string | null) => string;
+
+const SCHEDULE_LABEL: Record<string, ScheduleFormatter> = {
   DAILY: (t?: string | null) => `每日 · ${t ?? "23:30"}`,
-  IMMEDIATE: () => "立即任务",
+  IMMEDIATE: (_?: string | null) => "立即任务",
 };
 
 const STATUS_TONE = {
@@ -1483,10 +1485,7 @@ export interface TaskCardProps {
 }
 
 export function TaskCard({ task: t, lastRun, onTrigger, busy }: TaskCardProps) {
-  const schedule =
-    typeof SCHEDULE_LABEL[t.scheduleMode] === "function"
-      ? (SCHEDULE_LABEL[t.scheduleMode] as (time?: string | null) => string)(t.defaultTime)
-      : SCHEDULE_LABEL[t.scheduleMode];
+  const schedule = (SCHEDULE_LABEL[t.scheduleMode] as ScheduleFormatter)(t.defaultTime);
 
   return (
     <article className="rounded-lg border border-line bg-paper p-4">
