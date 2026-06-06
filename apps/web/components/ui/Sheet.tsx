@@ -47,7 +47,7 @@ export function Sheet({
     >
       <div
         className={cn(
-          "w-full max-w-[480px] rounded-t-xl bg-paper p-5 shadow-sheet",
+          "w-full max-w-[430px] rounded-t-xl bg-paper-2 p-5 shadow-sheet",
           className,
         )}
         style={{
@@ -65,7 +65,7 @@ export function Sheet({
             {secondaryAction && (
               <button
                 onClick={secondaryAction.onClick}
-                className="tap h-12 rounded-md bg-paper-2 text-ink text-body font-medium"
+                className="tap h-12 rounded-lg bg-paper-sunken text-ink text-body font-medium"
               >
                 {secondaryAction.label}
               </button>
@@ -75,7 +75,7 @@ export function Sheet({
                 onClick={primaryAction.onClick}
                 disabled={primaryAction.loading}
                 className={cn(
-                  "tap h-12 rounded-md text-body font-medium disabled:opacity-60",
+                  "tap h-12 rounded-lg text-body font-medium disabled:opacity-60",
                   !secondaryAction && "col-span-2",
                   primaryAction.danger
                     ? "bg-risk-high text-white"

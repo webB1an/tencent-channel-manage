@@ -13,25 +13,25 @@ export function StatCard({ label, value, hint, accent }: StatCardProps) {
   return (
     <div
       className={cn(
-        "rounded-lg p-4 border",
-        accent ? "bg-ink text-ink-inverse border-ink" : "bg-paper text-ink border-line",
+        "rounded-xl p-3.5 border",
+        accent ? "bg-accent-soft text-ink border-accent/20" : "bg-paper-2 text-ink border-line",
       )}
     >
       <div className="flex items-center justify-between">
         <p
           className={cn(
-            "text-micro tracking-[0.08em] uppercase",
-            accent ? "text-ink-inverse/70" : "text-ink-3",
+            "text-micro",
+            accent ? "text-accent" : "text-ink-3",
           )}
         >
           {label}
         </p>
         {accent && <span className="h-1.5 w-1.5 rounded-full bg-lime" aria-hidden />}
       </div>
-      <p className="mt-2 text-d2 tabular leading-none">
+      <p className="mt-2 text-d3 tabular leading-none">
         <NumberTicker value={value} />
       </p>
-      <p className={cn("mt-2 text-micro", accent ? "text-ink-inverse/60" : "text-ink-3")}>{hint}</p>
+      <p className={cn("mt-2 text-micro", accent ? "text-accent/75" : "text-ink-3")}>{hint}</p>
     </div>
   );
 }

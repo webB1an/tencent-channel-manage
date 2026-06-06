@@ -10,7 +10,7 @@ export type BadgeTone =
   | "outline";
 
 const tones: Record<BadgeTone, string> = {
-  neutral: "bg-paper-2 text-ink-2",
+  neutral: "bg-paper-sunken text-ink-2",
   riskHigh: "bg-risk-high/10 text-risk-high",
   riskMid: "bg-risk-mid/10 text-risk-mid",
   riskLow: "bg-risk-low/10 text-risk-low",
@@ -27,7 +27,7 @@ export function Badge({ tone = "neutral", uppercase, className, children, ...res
   return (
     <span
       className={cn(
-        "inline-flex items-center h-5 px-1.5 rounded-sm text-micro",
+        "inline-flex items-center h-6 px-2 rounded-full text-micro",
         tones[tone],
         uppercase && "uppercase tracking-[0.06em]",
         className,

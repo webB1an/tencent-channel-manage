@@ -26,6 +26,11 @@ const config: Config = {
           DEFAULT: "rgb(var(--lime) / <alpha-value>)",
           ink: "rgb(var(--lime-ink) / <alpha-value>)",
         },
+        accent: {
+          DEFAULT: "rgb(var(--accent) / <alpha-value>)",
+          soft: "rgb(var(--accent-soft) / <alpha-value>)",
+        },
+        warm: "rgb(var(--warm) / <alpha-value>)",
         risk: {
           high: "#E5484D",
           mid: "#F5A524",
@@ -38,10 +43,10 @@ const config: Config = {
         display: ["var(--font-inter)", "ui-sans-serif", "PingFang SC"],
       },
       fontSize: {
-        d1: ["44px", { lineHeight: "1.05", letterSpacing: "-0.04em", fontWeight: "500" }],
-        d2: ["32px", { lineHeight: "1.1",  letterSpacing: "-0.03em", fontWeight: "500" }],
-        d3: ["24px", { lineHeight: "1.15", letterSpacing: "-0.02em", fontWeight: "500" }],
-        h1: ["20px", { lineHeight: "1.3",  letterSpacing: "-0.01em", fontWeight: "600" }],
+        d1: ["40px", { lineHeight: "1.05", letterSpacing: "0", fontWeight: "700" }],
+        d2: ["28px", { lineHeight: "1.12",  letterSpacing: "0", fontWeight: "700" }],
+        d3: ["23px", { lineHeight: "1.15", letterSpacing: "0", fontWeight: "700" }],
+        h1: ["21px", { lineHeight: "1.28",  letterSpacing: "0", fontWeight: "700" }],
         h2: ["17px", { lineHeight: "1.35", fontWeight: "600" }],
         h3: ["15px", { lineHeight: "1.4",  fontWeight: "600" }],
         body: ["14px", { lineHeight: "1.55" }],
@@ -51,9 +56,9 @@ const config: Config = {
       },
       borderRadius: {
         sm: "6px",
-        md: "10px",
-        lg: "16px",
-        xl: "24px",
+        md: "8px",
+        lg: "12px",
+        xl: "18px",
       },
       boxShadow: {
         sheet: "0 -8px 32px -8px rgba(0,0,0,0.18), 0 -1px 0 var(--line) inset",

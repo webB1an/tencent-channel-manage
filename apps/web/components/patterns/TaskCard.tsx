@@ -40,7 +40,7 @@ export function TaskCard({ task: t, lastRun, onTrigger, busy }: TaskCardProps) {
   const schedule = (SCHEDULE_LABEL[t.scheduleMode] as ScheduleFormatter)(t.defaultTime);
 
   return (
-    <article className="rounded-lg border border-line bg-paper p-4">
+    <article className="surface rounded-xl p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-h2 text-ink">{TYPE_LABEL[t.type] ?? t.type}</h3>
@@ -51,7 +51,7 @@ export function TaskCard({ task: t, lastRun, onTrigger, busy }: TaskCardProps) {
         <button
           onClick={onTrigger}
           disabled={busy}
-          className="tap h-8 px-3 rounded-md border border-line text-mini text-ink hover:bg-paper-2 disabled:opacity-60"
+          className="tap h-10 shrink-0 rounded-full bg-accent-soft px-3 text-small font-semibold text-accent hover:bg-paper-sunken disabled:opacity-60"
         >
           {busy ? "排队中..." : "运行一次"}
         </button>

@@ -20,10 +20,10 @@ export function formatRelativeTime(input: Date | string, now: Date = new Date())
 }
 
 export function formatLocalDate(d: Date = new Date()): string {
-  const days = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+  const days = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
   const day = days[d.getDay()];
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
-  return `${day} · ${yyyy}-${mm}-${dd}`;
+  return `${yyyy}-${mm}-${dd} ${day}`;
 }

@@ -7,20 +7,20 @@ export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "dang
 export type ButtonSize = "sm" | "md" | "lg";
 
 const base =
-  "tap inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors duration-150 ease-out-quint disabled:opacity-50 disabled:pointer-events-none select-none";
+  "tap inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-colors duration-150 ease-out-quint disabled:opacity-50 disabled:pointer-events-none select-none";
 
 const variants: Record<ButtonVariant, string> = {
-  primary: "bg-lime text-lime-ink hover:bg-lime/90 active:bg-lime/85",
-  secondary: "bg-paper text-ink border border-line hover:border-line-strong hover:bg-paper-2",
-  ghost: "text-ink hover:bg-paper-2",
+  primary: "bg-accent text-white shadow-[0_10px_24px_-16px_rgb(var(--accent))] hover:bg-accent/92 active:bg-accent/88",
+  secondary: "bg-paper-2 text-ink border border-line hover:border-line-strong hover:bg-paper",
+  ghost: "text-ink hover:bg-accent-soft",
   danger: "bg-risk-high text-white hover:bg-risk-high/90",
   dangerGhost: "text-risk-high hover:bg-risk-high/10",
   amberGhost: "text-risk-mid hover:bg-risk-mid/10",
 };
 
 const sizes: Record<ButtonSize, string> = {
-  sm: "h-8 px-3 text-small",
-  md: "h-10 px-4 text-body",
+  sm: "h-9 px-3 text-small",
+  md: "h-11 px-4 text-body",
   lg: "h-12 px-5 text-h3",
 };
 

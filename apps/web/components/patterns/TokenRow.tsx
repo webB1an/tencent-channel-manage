@@ -25,7 +25,7 @@ export function TokenRow({ token, onSync, busy }: TokenRowProps) {
         <button
           onClick={onSync}
           disabled={busy}
-          className="tap h-7 px-2.5 rounded-sm text-mini text-ink-2 hover:bg-paper-2 disabled:opacity-60"
+          className="tap h-10 px-3 rounded-full bg-paper-sunken text-small text-ink-2 hover:bg-paper disabled:opacity-60"
         >
           {busy ? "同步中..." : "同步频道"}
         </button>

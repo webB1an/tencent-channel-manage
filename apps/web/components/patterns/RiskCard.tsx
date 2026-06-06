@@ -41,7 +41,7 @@ export function RiskCard({ inspection: i, onIgnore, onProcessed, onDelete, onMut
   return (
     <article
       className={cn(
-        "rounded-lg border border-line bg-paper p-4 relative",
+        "surface rounded-xl p-4 relative",
         isHigh && "risk-pulse",
       )}
     >
@@ -64,17 +64,17 @@ export function RiskCard({ inspection: i, onIgnore, onProcessed, onDelete, onMut
         <span className="mt-1 h-1.5 w-1.5 rounded-full bg-lime shrink-0" aria-hidden />
         <span>AI：{i.reason}</span>
       </div>
-      <div className="mt-3 pl-2 grid grid-cols-4 gap-1.5">
-        <button onClick={onIgnore} className="tap h-8 rounded-md text-micro text-ink-2 hover:bg-paper-2">
+      <div className="mt-3 pl-2 grid grid-cols-2 gap-2">
+        <button onClick={onIgnore} className="tap h-10 rounded-lg bg-paper-sunken text-small text-ink-2 hover:bg-paper">
           忽略
         </button>
-        <button onClick={onProcessed} className="tap h-8 rounded-md bg-paper-2 text-micro text-ink">
+        <button onClick={onProcessed} className="tap h-10 rounded-lg bg-accent-soft text-small font-semibold text-accent">
           {statusLabel("PROCESSED")}
         </button>
-        <button onClick={onDelete} className="tap h-8 rounded-md text-micro text-risk-high hover:bg-risk-high/10">
+        <button onClick={onDelete} className="tap h-10 rounded-lg text-small text-risk-high hover:bg-risk-high/10">
           删除
         </button>
-        <button onClick={onMute} className="tap h-8 rounded-md text-micro text-risk-mid hover:bg-risk-mid/10">
+        <button onClick={onMute} className="tap h-10 rounded-lg text-small text-risk-mid hover:bg-risk-mid/10">
           禁言
         </button>
       </div>

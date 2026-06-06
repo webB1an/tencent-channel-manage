@@ -15,14 +15,14 @@ export function HotTopicItem({ rank, title, authorName, likeCount, commentCount,
     <div className="flex items-start gap-3">
       <span
         className={cn(
-          "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded text-h3 font-semibold tabular",
-          rank <= 3 ? "bg-lime text-lime-ink" : "bg-paper-2 text-ink-3",
+          "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-h3 font-semibold tabular",
+          rank <= 3 ? "bg-warm text-white" : "bg-paper-sunken text-ink-3",
         )}
       >
         {rank}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-h3 text-ink truncate">{title}</p>
+        <p className="text-h3 text-ink line-clamp-2">{title}</p>
         <p className="mt-0.5 text-micro text-ink-3">
           {authorName ?? "未知"} · 赞 {likeCount ?? 0} · 评论 {commentCount ?? 0}
         </p>

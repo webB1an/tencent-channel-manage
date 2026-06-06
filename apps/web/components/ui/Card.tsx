@@ -5,7 +5,7 @@ export type CardVariant = "default" | "sunken" | "outline";
 export type CardPad = "sm" | "md" | "lg";
 
 const variants: Record<CardVariant, string> = {
-  default: "bg-paper border border-line",
+  default: "surface",
   sunken: "bg-paper-2",
   outline: "bg-transparent border border-line",
 };
@@ -25,7 +25,7 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 export function Card({ variant = "default", pad = "md", as = "div", className, children, ...rest }: CardProps) {
   const Tag = as as "div";
   return (
-    <Tag className={cn("rounded-lg", variants[variant], pads[pad], className)} {...rest}>
+    <Tag className={cn("rounded-xl", variants[variant], pads[pad], className)} {...rest}>
       {children}
     </Tag>
   );

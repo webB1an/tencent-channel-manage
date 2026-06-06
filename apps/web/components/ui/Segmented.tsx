@@ -21,7 +21,7 @@ export function Segmented<T extends string>({ value, onChange, options, classNam
     <div
       role="tablist"
       className={cn(
-        "grid gap-1 rounded-md border border-line bg-paper p-1",
+        "grid gap-1 rounded-xl bg-paper-sunken p-1",
         options.length === 2 ? "grid-cols-2" : "grid-cols-3",
         className,
       )}
@@ -35,8 +35,8 @@ export function Segmented<T extends string>({ value, onChange, options, classNam
             aria-selected={active}
             onClick={() => onChange(opt.value)}
             className={cn(
-              "tap h-9 rounded text-small font-medium transition-colors duration-[180ms] ease-out-quint",
-              active ? "bg-ink text-ink-inverse" : "text-ink-2 hover:text-ink",
+              "tap h-11 rounded-lg text-small font-semibold transition-colors duration-[180ms] ease-out-quint",
+              active ? "bg-paper-2 text-ink shadow-[0_4px_14px_-12px_rgb(15_23_42/0.8)]" : "text-ink-3 hover:text-ink",
             )}
           >
             {opt.label}

@@ -21,7 +21,7 @@ export interface RiskCardCompactProps {
 
 export function RiskCardCompact({ inspection: i }: RiskCardCompactProps) {
   return (
-    <div className="rounded-md bg-paper-2 p-3 flex items-start gap-3">
+    <div className="surface rounded-xl p-3 flex items-start gap-3">
       <Badge tone={riskTone(i.riskLevel)} uppercase className="shrink-0">
         {riskLabel(i.riskLevel)}
       </Badge>
