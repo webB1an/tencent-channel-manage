@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, type ReactNode } from "react";
+import { Children, useId, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 export function Radio({ checked, onChange, disabled, children, name, value }: { checked: boolean; onChange: () => void; disabled?: boolean; children?: ReactNode; name?: string; value?: string }) {
@@ -28,7 +28,7 @@ export function Radio({ checked, onChange, disabled, children, name, value }: { 
 }
 
 export function RadioGroup<T extends string>({ value, onChange, name, children }: { value: T; onChange: (v: T) => void; name?: string; children: ReactNode }) {
-  const items = (Array.isArray(children) ? children : [children]).filter(Boolean) as Array<{ props: { value: T; disabled?: boolean; children?: ReactNode } }>;
+  const items = Children.toArray(children).filter(Boolean) as Array<{ props: { value: T; disabled?: boolean; children?: ReactNode } }>;
   return (
     <div className="space-y-2">
       {items.map((child, i) => (

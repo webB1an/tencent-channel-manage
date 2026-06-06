@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, type ReactNode } from "react";
+import { Children, useId, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { Icon } from "./icon";
 
@@ -26,14 +26,8 @@ export function Checkbox({ checked, onChange, disabled, children }: { checked: b
   );
 }
 
-export function CheckboxGroup<T extends string>({ value, onChange, children }: { value: T[]; onChange: (v: T[]) => void; children: React.ReactNode }) {
-  return (
-    <CheckboxGroupInner value={value} onChange={onChange}>{children}</CheckboxGroupInner>
-  );
-}
-
-function CheckboxGroupInner<T extends string>({ value, onChange, children }: { value: T[]; onChange: (v: T[]) => void; children: React.ReactNode }) {
-  const items = (Array.isArray(children) ? children : [children]).filter(Boolean) as Array<{ props: { value: T; checked: boolean; onChange: (v: boolean) => void } }>;
+export function CheckboxGroup<T extends string>({ value, onChange, children }: { value: T[]; onChange: (v: T[]) => void; children: ReactNode }) {
+  const items = Children.toArray(children).filter(Boolean) as Array<{ props: { value: T; children?: ReactNode } }>;
   return (
     <div className="space-y-2">
       {items.map((child, i) => {
@@ -44,7 +38,7 @@ function CheckboxGroupInner<T extends string>({ value, onChange, children }: { v
             checked={value.includes(childValue)}
             onChange={(c) => onChange(c ? [...value, childValue] : value.filter((x) => x !== childValue))}
           >
-            {(child.props as { children?: ReactNode }).children}
+            {child.props.children}
           </Checkbox>
         );
       })}

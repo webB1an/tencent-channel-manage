@@ -60,14 +60,13 @@ export function useEscape(onEscape: () => void, active: boolean) {
   }, [active]);
 }
 
-export function usePortal(id = "ui-portal") {
-  return useEffect(() => {
-    if (typeof document === "undefined") return;
-    let host = document.getElementById(id);
-    if (!host) {
-      host = document.createElement("div");
-      host.id = id;
-      document.body.appendChild(host);
-    }
-  }, [id]);
+export function useBodyScrollLock(active: boolean) {
+  useEffect(() => {
+    if (!active || typeof document === "undefined") return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [active]);
 }

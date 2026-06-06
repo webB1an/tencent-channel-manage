@@ -48,6 +48,10 @@ export function DatePicker({ value, onChange, mode = "datetime", title = "选择
     if (p === "d") next.setDate(v);
     if (p === "h") next.setHours(v);
     if (p === "m") next.setMinutes(v);
+    if (p === "y" || p === "M") {
+      const last = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
+      if (next.getDate() > last) next.setDate(last);
+    }
     setDraft(next);
   }
 

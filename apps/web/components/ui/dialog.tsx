@@ -1,19 +1,14 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { useFocusTrap, useEscape } from "@/lib/a11y";
+import { useFocusTrap, useEscape, useBodyScrollLock } from "@/lib/a11y";
 import { cn } from "@/lib/cn";
 
 export function Dialog({ open, onOpenChange, title, content, actions }: { open: boolean; onOpenChange: (v: boolean) => void; title?: string; content: ReactNode; actions?: ReactNode }) {
   const ref = useFocusTrap<HTMLDivElement>(open);
   useEscape(() => onOpenChange(false), open);
-
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    document.body.style.overflow = open ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
-  }, [open]);
+  useBodyScrollLock(open);
 
   if (typeof document === "undefined" || !open) return null;
   return createPortal(
