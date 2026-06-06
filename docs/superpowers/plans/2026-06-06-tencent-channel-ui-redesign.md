@@ -2647,13 +2647,14 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 "use client";
 
 import { useState } from "react";
+import type { FormEvent, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { api, setToken } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { cn } from "@/lib/utils";
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block">
       <span className="text-micro text-ink-3 tracking-[0.04em]">{label}</span>
@@ -2669,7 +2670,7 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  async function submit(e: React.FormEvent) {
+  async function submit(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
     setErr(null);
