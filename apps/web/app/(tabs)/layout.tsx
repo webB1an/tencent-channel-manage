@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
-import { BottomNav } from "@/components/BottomNav";
+import { BottomNav } from "@/components/layout/BottomNav";
 
 export default function TabsLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="pb-20">
+    <div className="page-enter pb-20">
       {children}
       <BottomNav />
     </div>
