@@ -3,6 +3,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "./status-badge";
 import { TokenText } from "./token-text";
+import { InfoTile } from "./info-tile";
+import { formatShortDate } from "@/lib/utils";
 import type { Account } from "@/lib/domain";
 
 export function AccountCard({ account, onDelete }: { account: Account; onDelete?: () => void }) {
@@ -17,10 +19,10 @@ export function AccountCard({ account, onDelete }: { account: Account; onDelete?
           <StatusBadge status={account.status} />
         </div>
         <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
-          <Info label="Token" value={<TokenText tail={account.tokenTail} />} />
-          <Info label="频道" value={`${account.channelCount ?? 0}`} />
-          <Info label="未完成任务" value={`${account.pendingTaskCount ?? 0}`} />
-          <Info label="最近运行" value={account.lastRunAt ? shortDate(account.lastRunAt) : "暂无"} />
+          <InfoTile label="Token" value={<TokenText tail={account.tokenTail} />} />
+          <InfoTile label="频道" value={`${account.channelCount ?? 0}`} />
+          <InfoTile label="未完成任务" value={`${account.pendingTaskCount ?? 0}`} />
+          <InfoTile label="最近运行" value={account.lastRunAt ? formatShortDate(account.lastRunAt) : "暂无"} />
         </dl>
       </Link>
       <div className="grid grid-cols-3 gap-2 border-t border-border pt-3">
@@ -30,19 +32,4 @@ export function AccountCard({ account, onDelete }: { account: Account; onDelete?
       </div>
     </Card>
   );
-}
-
-function Info({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="rounded-md bg-bg-page px-3 py-2">
-      <dt className="text-xs text-text-3">{label}</dt>
-      <dd className="mt-0.5 truncate font-medium text-text">{value}</dd>
-    </div>
-  );
-}
-
-function shortDate(value: string) {
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
 }

@@ -21,3 +21,9 @@ export function formatLocalDate(d: Date = new Date()): string {
   const dd = String(d.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd} ${day}`;
 }
+
+export function formatShortDate(input: Date | string): string {
+  const d = typeof input === "string" ? new Date(input) : input;
+  if (Number.isNaN(d.getTime())) return typeof input === "string" ? input : "";
+  return d.toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+}

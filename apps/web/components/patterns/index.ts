@@ -4,6 +4,7 @@ export { FieldLabel } from "./field-label";
 export { Message } from "./message";
 export { TokenText } from "./token-text";
 export { StatusBadge } from "./status-badge";
+export { InfoTile } from "./info-tile";
 export { StatCard } from "./stat-card";
 export { RiskCard } from "./risk-card";
 export { RiskCardCompact } from "./risk-card-compact";

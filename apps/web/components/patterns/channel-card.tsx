@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
+import { InfoTile } from "./info-tile";
 import type { Channel } from "@/lib/domain";
 
 export function ChannelCard({ channel }: { channel: Channel }) {
@@ -17,20 +18,11 @@ export function ChannelCard({ channel }: { channel: Channel }) {
           </span>
         </div>
         <div className="grid grid-cols-3 gap-2 text-sm">
-          <Info label="状态" value="正常" />
-          <Info label="板块" value={`${channel.sectionCount ?? 0}`} />
-          <Info label="任务" value={`${channel.scheduledTaskCount ?? 0}`} />
+          <InfoTile label="状态" value="正常" />
+          <InfoTile label="板块" value={`${channel.sectionCount ?? 0}`} />
+          <InfoTile label="任务" value={`${channel.scheduledTaskCount ?? 0}`} />
         </div>
       </Card>
     </Link>
-  );
-}
-
-function Info({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="rounded-md bg-bg-page px-3 py-2">
-      <dt className="text-xs text-text-3">{label}</dt>
-      <dd className="mt-0.5 font-medium text-text">{value}</dd>
-    </div>
   );
 }

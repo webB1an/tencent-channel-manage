@@ -5,6 +5,7 @@ export { FieldLabel } from "@/components/patterns/field-label";
 export { Message } from "@/components/patterns/message";
 export { TokenText } from "@/components/patterns/token-text";
 export { StatusBadge as StatusTag } from "@/components/patterns/status-badge";
+export { InfoTile } from "@/components/patterns/info-tile";
 export { AccountCard } from "@/components/patterns/account-card";
 export { ChannelCard } from "@/components/patterns/channel-card";
 export { TaskTemplateCard } from "@/components/patterns/task-template-card";
