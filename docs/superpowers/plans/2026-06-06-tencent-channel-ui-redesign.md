@@ -2158,7 +2158,7 @@ export default function TasksPage() {
           <SectionTitle step="3" title="模型" />
           <div className="mt-3 rounded-md bg-paper-2 px-3 py-2 text-small text-ink-2">
             当前：{selectedModel ? selectedModel.model : "未配置"}
-            {!selectedModel && <span className="ml-2 text-risk-mid">先去"我的"配置</span>}
+            {!selectedModel && <span className="ml-2 text-risk-mid">先去我的配置</span>}
           </div>
         </section>
       )}
