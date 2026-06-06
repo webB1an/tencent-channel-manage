@@ -35,6 +35,8 @@ export function Sheet({
 
   if (!open) return null;
 
+  const titleId = React.useId();
+
   return (
     <div
       className="fixed inset-0 z-30 flex items-end justify-center bg-ink/40"
@@ -42,6 +44,7 @@ export function Sheet({
       onClick={onClose}
       role="dialog"
       aria-modal
+      aria-labelledby={title ? titleId : undefined}
     >
       <div
         className={cn(
@@ -55,7 +58,7 @@ export function Sheet({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-line-strong" />
-        {title && <h2 className="text-h1 text-ink">{title}</h2>}
+        {title && <h2 id={titleId} className="text-h1 text-ink">{title}</h2>}
         {description && <p className="mt-2 text-body text-ink-2">{description}</p>}
         {children && <div className="mt-4">{children}</div>}
         {(primaryAction || secondaryAction) && (
@@ -74,6 +77,7 @@ export function Sheet({
                 disabled={primaryAction.loading}
                 className={cn(
                   "tap h-12 rounded-md text-body font-medium disabled:opacity-60",
+                  !secondaryAction && "col-span-2",
                   primaryAction.danger
                     ? "bg-risk-high text-white"
                     : "bg-ink text-ink-inverse",
