@@ -4,6 +4,13 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, setToken } from "@/lib/api";
 import type { ModelView, TokenView } from "@tcm/shared";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Textarea } from "@/components/ui/Textarea";
+import { TokenRow } from "@/components/patterns/TokenRow";
+import { ModelRow } from "@/components/patterns/ModelRow";
+import { Card } from "@/components/ui/Card";
+import { cn } from "@/lib/utils";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -15,7 +22,7 @@ export default function ProfilePage() {
   const [model, setModel] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
 
   async function refresh() {
     const [t, m] = await Promise.all([api.listTokens(), api.listModels()]);
@@ -37,9 +44,9 @@ export default function ProfilePage() {
       await refresh();
       setLabel("");
       setSecret("");
-      setMessage("Token 已保存并校验");
-    } catch (error) {
-      setMessage((error as Error).message);
+      setMessage({ kind: "ok", text: "Token 已保存并校验" });
+    } catch (e) {
+      setMessage({ kind: "err", text: (e as Error).message });
     } finally {
       setBusy(null);
     }
@@ -50,9 +57,9 @@ export default function ProfilePage() {
     setMessage(null);
     try {
       const res = await api.syncGuilds(id);
-      setMessage(`已同步 ${res.count} 个频道`);
-    } catch (error) {
-      setMessage((error as Error).message);
+      setMessage({ kind: "ok", text: `已同步 ${res.count} 个频道` });
+    } catch (e) {
+      setMessage({ kind: "err", text: (e as Error).message });
     } finally {
       setBusy(null);
     }
@@ -68,9 +75,9 @@ export default function ProfilePage() {
       await refresh();
       setModel("");
       setApiKey("");
-      setMessage("模型配置已保存");
-    } catch (error) {
-      setMessage((error as Error).message);
+      setMessage({ kind: "ok", text: "模型配置已保存" });
+    } catch (e) {
+      setMessage({ kind: "err", text: (e as Error).message });
     } finally {
       setBusy(null);
     }
@@ -78,66 +85,92 @@ export default function ProfilePage() {
 
   function logout() {
     setToken(null);
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem("tcm_username");
+    }
     router.replace("/login");
   }
 
   return (
-    <main className="px-5 pt-6">
-      <h1 className="text-xl font-semibold text-ink">我的</h1>
-      {message && <p className="mt-3 rounded-xl bg-brand-soft px-3 py-2 text-sm text-brand">{message}</p>}
+    <main className="px-5 pt-8 pb-12">
+      <header>
+        <h1 className="text-d2 text-ink">我的</h1>
+        <p className="mt-1 text-body text-ink-2 font-mono">admin</p>
+        <div className="mt-5 h-px w-8 bg-ink" />
+      </header>
 
-      <section className="mt-5 rounded-2xl bg-white p-4 shadow-card">
-        <h2 className="text-sm font-medium text-ink">频道 Token</h2>
-        <div className="mt-3 space-y-2">
-          <input className="input" placeholder="备注名，如主号" value={label} onChange={(e) => setLabel(e.target.value)} />
-          <textarea className="input min-h-24" placeholder="粘贴 connect.qq.com/ai 的 token" value={secret} onChange={(e) => setSecret(e.target.value)} />
-          <button disabled={busy === "token"} onClick={addToken} className="tap w-full rounded-xl bg-brand py-2.5 text-sm text-white disabled:opacity-60">
-            {busy === "token" ? "保存中..." : "保存并校验"}
-          </button>
+      {message && (
+        <p
+          className={cn(
+            "mt-5 rounded-md px-3 py-2 text-small",
+            message.kind === "ok" ? "bg-lime text-lime-ink" : "bg-risk-high/10 text-risk-high",
+          )}
+        >
+          {message.text}
+        </p>
+      )}
+
+      <section className="mt-7">
+        <div className="flex items-end justify-between">
+          <h2 className="text-h2 text-ink">账户</h2>
         </div>
-        <ul className="mt-4 divide-y divide-slate-100">
-          {tokens.map((t) => (
-            <li key={t.id} className="py-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-ink">{t.label}</p>
-                  <p className="text-xs text-ink-soft">尾号 ···{t.tokenTail}</p>
-                </div>
-                <span className={"rounded-full px-2 py-0.5 text-[10px] " + (t.status === "ACTIVE" ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-500")}>
-                  {t.status === "ACTIVE" ? "有效" : "失效"}
-                </span>
-              </div>
-              <button disabled={busy === t.id} onClick={() => syncGuilds(t.id)} className="tap mt-2 rounded-full bg-paper px-3 py-1.5 text-xs text-ink disabled:opacity-60">
-                {busy === t.id ? "同步中..." : "同步频道"}
-              </button>
-            </li>
-          ))}
-        </ul>
+        <button
+          onClick={logout}
+          className="tap mt-3 w-full h-12 rounded-lg border border-line bg-paper text-small text-risk-high flex items-center justify-between px-4 hover:bg-risk-high/5"
+        >
+          <span>退出登录</span>
+          <span aria-hidden>→</span>
+        </button>
       </section>
 
-      <section className="mt-5 rounded-2xl bg-white p-4 shadow-card">
-        <h2 className="text-sm font-medium text-ink">模型配置</h2>
-        <div className="mt-3 space-y-2">
-          <input className="input" placeholder="Base URL" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} />
-          <input className="input" placeholder="Model，如 gpt-4o-mini" value={model} onChange={(e) => setModel(e.target.value)} />
-          <input className="input" placeholder="API Key" type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} />
-          <button disabled={busy === "model"} onClick={addModel} className="tap w-full rounded-xl bg-brand-soft py-2.5 text-sm text-brand disabled:opacity-60">
-            {busy === "model" ? "保存中..." : "保存并测试"}
-          </button>
+      <section className="mt-8">
+        <div className="flex items-end justify-between">
+          <h2 className="text-h2 text-ink">频道 Token</h2>
+          <span className="text-micro text-ink-3">· {tokens.length}</span>
         </div>
-        <ul className="mt-4 divide-y divide-slate-100">
-          {models.map((m) => (
-            <li key={m.id} className="py-3 text-sm text-ink">
-              <p>{m.model}</p>
-              <p className="text-xs text-ink-soft">{m.baseUrl ?? "https://api.openai.com"}</p>
-            </li>
-          ))}
-        </ul>
+        <Card pad="md" className="mt-3 space-y-2">
+          <Input placeholder="备注名，如主号" value={label} onChange={(e) => setLabel(e.target.value)} />
+          <Textarea
+            placeholder="粘贴 connect.qq.com/ai 的 token"
+            value={secret}
+            onChange={(e) => setSecret(e.target.value)}
+            rows={4}
+            className="min-h-24"
+          />
+          <Button variant="primary" size="md" fullWidth onClick={addToken} loading={busy === "token"} disabled={!label || !secret}>
+            保存并校验
+          </Button>
+        </Card>
+        {tokens.length > 0 && (
+          <Card pad="md" className="mt-3">
+            {tokens.map((t) => (
+              <TokenRow key={t.id} token={t} onSync={() => syncGuilds(t.id)} busy={busy === t.id} />
+            ))}
+          </Card>
+        )}
       </section>
 
-      <button onClick={logout} className="tap mt-6 w-full rounded-xl bg-rose-50 py-3 text-sm text-rose-500">
-        退出登录
-      </button>
+      <section className="mt-8">
+        <div className="flex items-end justify-between">
+          <h2 className="text-h2 text-ink">模型配置</h2>
+          <span className="text-micro text-ink-3">· {models.length}</span>
+        </div>
+        <Card pad="md" className="mt-3 space-y-2">
+          <Input placeholder="Base URL" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} />
+          <Input placeholder="Model，如 gpt-4o-mini" value={model} onChange={(e) => setModel(e.target.value)} />
+          <Input placeholder="API Key" type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} />
+          <Button variant="primary" size="md" fullWidth onClick={addModel} loading={busy === "model"} disabled={!model || !apiKey}>
+            保存并测试
+          </Button>
+        </Card>
+        {models.length > 0 && (
+          <Card pad="md" className="mt-3">
+            {models.map((m) => (
+              <ModelRow key={m.id} model={m} />
+            ))}
+          </Card>
+        )}
+      </section>
     </main>
   );
 }
