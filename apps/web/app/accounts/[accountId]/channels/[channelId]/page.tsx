@@ -1,97 +1,68 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Button, Card, List, Skeleton, Toast } from "antd-mobile";
-import { channelService, executionService, taskService, type Channel, type ExecutionRecord, type ScheduledTask, type Section } from "@/lib/domain";
-import { EmptyPanel, ExecutionRecordCard, PageHeader, ScheduledTaskCard } from "@/components/business/Mobile";
+import { useEffect, useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Toast } from "@/components/ui/toast";
+import { TopBar } from "@/components/layout/top-bar";
+import { TokenRow, StatusBadge, EmptyState } from "@/components/patterns";
+import { accountService, channelService, type Account, type Channel, type Section } from "@/lib/domain";
 
 export default function ChannelDetailPage({ params }: { params: { accountId: string; channelId: string } }) {
+  const [account, setAccount] = useState<Account | null>(null);
   const [channel, setChannel] = useState<Channel | null>(null);
   const [sections, setSections] = useState<Section[]>([]);
-  const [tasks, setTasks] = useState<ScheduledTask[]>([]);
-  const [records, setRecords] = useState<ExecutionRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
-
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [c, ss, allTasks, allRecords] = await Promise.all([
-        channelService.getChannelDetail(params.accountId, params.channelId),
-        channelService.getSectionsByChannel(params.accountId, params.channelId),
-        taskService.getScheduledTasks(),
-        executionService.getExecutionRecords(),
-      ]);
-      setChannel(c);
-      setSections(ss);
-      setTasks(allTasks.filter((task) => task.channelId === params.channelId || task.sectionIds.includes(params.channelId)));
-      setRecords(allRecords.filter((record) => record.channelId === params.channelId).slice(0, 3));
-    } catch (e) {
-      Toast.show({ content: (e as Error).message });
-    } finally {
-      setLoading(false);
-    }
-  }, [params.accountId, params.channelId]);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    Promise.all([
+      accountService.getAccountDetail(params.accountId),
+      channelService.getChannelDetail(params.accountId, params.channelId),
+      channelService.getSectionsByChannel(params.accountId, params.channelId),
+    ])
+      .then(([a, c, s]) => { setAccount(a); setChannel(c); setSections(s); })
+      .catch((e) => Toast.show({ content: (e as Error).message, type: "error" }))
+      .finally(() => setLoading(false));
+  }, [params.accountId, params.channelId]);
 
-  async function syncSections() {
-    setBusy(true);
-    try {
-      const res = await channelService.refreshSectionsByChannel(params.accountId, params.channelId);
-      Toast.show({ content: `已刷新 ${res.count} 个板块` });
-      await refresh();
-    } catch (e) {
-      Toast.show({ content: (e as Error).message });
-    } finally {
-      setBusy(false);
-    }
-  }
+  if (loading) return <main className="page-shell"><Skeleton height={300} className="block" /></main>;
+  if (!channel) return <TopBar title="频道详情" />;
+
+  const tokenTail = channel.id.slice(-4) || "----";
 
   return (
-    <main className="page-pad">
-      <PageHeader title="频道详情" backHref={`/accounts/${params.accountId}`} />
-      {loading ? (
-        <Skeleton.Paragraph lineCount={8} animated />
-      ) : !channel ? (
-        <EmptyPanel title="频道不存在" />
-      ) : (
-        <>
-          <Card className="adm-card-mobile">
-            <h2 className="text-h2 text-ink">{channel.name}</h2>
-            <p className="mt-2 text-small text-ink-3">ID：{channel.channelId}</p>
-            <p className="mt-1 text-small text-ink-3">状态：正常</p>
-          </Card>
-
-          <section className="mt-5">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-h2 text-ink">板块列表</h2>
-              <Button size="small" color="primary" fill="none" loading={busy} onClick={syncSections}>刷新板块</Button>
+    <>
+      <TopBar title={channel.name} />
+      <main className="page-shell space-y-4">
+        <section className="rounded-lg border border-border bg-bg-card p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-2xl text-text">{channel.name}</h2>
+              <p className="mt-1 text-xs text-text-3">ID：{channel.channelId}</p>
+              {account && <p className="mt-1 text-sm text-text-2">账号：{account.nickname || account.qq}</p>}
             </div>
-            {sections.length === 0 ? <EmptyPanel title="暂无板块" hint="频道无板块时任务只能选择全频道" /> : (
-              <List className="rounded-lg">
-                {sections.map((section) => <List.Item key={section.id} description={section.sectionId}>{section.name}</List.Item>)}
-              </List>
-            )}
-          </section>
+            <StatusBadge status="normal" />
+          </div>
+        </section>
 
-          <section className="mt-5">
-            <h2 className="mb-3 text-h2 text-ink">关联定时任务摘要</h2>
-            {tasks.length === 0 ? <EmptyPanel title="暂无关联定时任务" hint="任务只能从任务中心创建" /> : (
-              <ul className="space-y-3">{tasks.slice(0, 3).map((task) => <li key={task.id}><ScheduledTaskCard task={task} /></li>)}</ul>
-            )}
-          </section>
+        <section>
+          <h3 className="mb-3 text-lg text-text">板块</h3>
+          {sections.length === 0 ? <EmptyState title="暂无板块" /> : (
+            <ul className="overflow-hidden rounded-lg border border-border bg-bg-card">
+              {sections.map((s) => (
+                <li key={s.id} className="border-b border-border px-4 py-3 last:border-0">
+                  <p className="text-md text-text">{s.name}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
-          <section className="mt-5">
-            <h2 className="mb-3 text-h2 text-ink">最近执行记录</h2>
-            {records.length === 0 ? <EmptyPanel title="暂无执行记录" /> : (
-              <ul className="space-y-3">{records.map((record) => <li key={record.id}><ExecutionRecordCard record={record} /></li>)}</ul>
-            )}
-          </section>
-        </>
-      )}
-    </main>
+        <TokenRow
+          name="频道 Token"
+          token={`tk_****${tokenTail}`}
+          status={{ variant: "success", text: "有效" }}
+        />
+      </main>
+    </>
   );
 }

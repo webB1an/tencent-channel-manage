@@ -246,8 +246,8 @@ export const accountService = {
     await api.checkToken(created.id).catch(() => undefined);
     return created;
   },
-  async updateAccount(accountId: string, data: { token?: string; nickname?: string; remark?: string }) {
-    saveProfile(accountId, { nickname: data.nickname, remark: data.remark });
+  async updateAccount(accountId: string, data: { qq?: string; token?: string; nickname?: string; remark?: string }) {
+    saveProfile(accountId, { qq: data.qq, nickname: data.nickname, remark: data.remark });
     if (data.token) await api.checkToken(accountId).catch(() => undefined);
   },
   async refreshAccountStatus(accountId: string) {
@@ -341,7 +341,14 @@ export const taskService = {
   async getScheduledTaskDetail(id: string) {
     return (await this.getScheduledTasks()).find((t) => t.id === id) ?? null;
   },
-  async updateScheduledTask(id: string) {
+  async getScheduledTask(id: string) {
+    return this.getScheduledTaskDetail(id);
+  },
+  async updateScheduledTask(
+    id: string,
+    payload: { accountId?: string; scheduleConfig?: ScheduleConfig; taskConfig?: Record<string, unknown> } = {}
+  ) {
+    void payload;
     return { id };
   },
   async enableScheduledTask(id: string) {
@@ -406,5 +413,8 @@ export const executionService = {
   },
   async getExecutionRecordDetail(id: string) {
     return (await this.getExecutionRecords()).find((r) => r.id === id) ?? null;
+  },
+  async getExecutionRecord(id: string) {
+    return this.getExecutionRecordDetail(id);
   },
 };

@@ -1,63 +1,80 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Card, Input, TextArea, Toast } from "antd-mobile";
-import { accountService, type Account } from "@/lib/domain";
-import { BottomActionBar, FieldLabel, PageHeader } from "@/components/business/Mobile";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Toast } from "@/components/ui/toast";
+import { TopBar } from "@/components/layout/top-bar";
+import { FieldLabel } from "@/components/patterns";
+import { accountService } from "@/lib/domain";
 
 export default function EditAccountPage({ params }: { params: { accountId: string } }) {
   const router = useRouter();
-  const [account, setAccount] = useState<Account | null>(null);
+  const [qq, setQq] = useState("");
   const [token, setToken] = useState("");
   const [nickname, setNickname] = useState("");
   const [remark, setRemark] = useState("");
+  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const canSave = useMemo(() => qq.trim() && token.trim(), [qq, token]);
 
   useEffect(() => {
-    accountService.getAccountDetail(params.accountId).then((a) => {
-      setAccount(a);
-      setNickname(a?.nickname ?? "");
-      setRemark(a?.remark ?? "");
-    }).catch((e) => Toast.show({ content: (e as Error).message }));
+    accountService.getAccountDetail(params.accountId)
+      .then((a) => {
+        if (!a) return;
+        setQq(a.qq);
+        setNickname(a.nickname || "");
+        setRemark(a.remark || "");
+      })
+      .catch((e) => Toast.show({ content: (e as Error).message, type: "error" }))
+      .finally(() => setLoading(false));
   }, [params.accountId]);
 
   async function save() {
+    if (!canSave) { Toast.show({ content: "请填写 QQ号 和 Token", type: "error" }); return; }
     setBusy(true);
     try {
-      await accountService.updateAccount(params.accountId, { token, nickname, remark });
-      Toast.show({ content: "修改已保存" });
+      await accountService.updateAccount(params.accountId, { qq, token, nickname, remark });
+      Toast.show({ content: "账号已更新", type: "success" });
       router.replace(`/accounts/${params.accountId}`);
     } catch (e) {
-      Toast.show({ content: (e as Error).message });
+      Toast.show({ content: (e as Error).message, type: "error" });
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <main className="page-pad pb-28">
-      <PageHeader title="编辑账号" backHref={`/accounts/${params.accountId}`} />
-      <Card className="adm-card-mobile">
-        <FieldLabel>QQ号</FieldLabel>
-        <Input value={account?.qq ?? ""} disabled placeholder="不可修改" />
-        <div className="mt-4">
-          <FieldLabel>Token</FieldLabel>
-          <TextArea value={token} onChange={setToken} placeholder="留空表示不修改 Token" rows={4} />
-        </div>
-        <div className="mt-4">
-          <FieldLabel>昵称</FieldLabel>
-          <Input value={nickname} onChange={setNickname} placeholder="方便识别账号，可不填" clearable />
-        </div>
-        <div className="mt-4">
-          <FieldLabel>备注</FieldLabel>
-          <TextArea value={remark} onChange={setRemark} placeholder="自定义备注，可不填" rows={3} />
-        </div>
-      </Card>
-      <BottomActionBar>
-        <Button block color="primary" size="large" loading={busy} onClick={save}>保存修改</Button>
-      </BottomActionBar>
-    </main>
+    <>
+      <TopBar title="编辑账号" />
+      <main className="page-shell space-y-4">
+        {loading ? (
+          <Skeleton height={300} className="block" />
+        ) : (
+          <>
+            <section>
+              <FieldLabel required>QQ号</FieldLabel>
+              <Input value={qq} onChange={(e) => setQq(e.target.value)} placeholder="请输入 QQ号" />
+            </section>
+            <section>
+              <FieldLabel required>Token</FieldLabel>
+              <Textarea value={token} onChange={(e) => setToken(e.target.value)} placeholder="请输入 Token" rows={4} />
+            </section>
+            <section>
+              <FieldLabel>昵称</FieldLabel>
+              <Input value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="方便识别账号,可不填" />
+            </section>
+            <section>
+              <FieldLabel>备注</FieldLabel>
+              <Textarea value={remark} onChange={(e) => setRemark(e.target.value)} placeholder="自定义备注,可不填" rows={3} />
+            </section>
+            <Button block size="lg" loading={busy} disabled={!canSave} onClick={save}>保存</Button>
+          </>
+        )}
+      </main>
+    </>
   );
 }
-

@@ -2,76 +2,59 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Button, Dialog, Skeleton, Toast } from "antd-mobile";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Toast } from "@/components/ui/toast";
+import { PageHeader, StatCard, AccountCard, EmptyState } from "@/components/patterns";
 import { accountService, type Account } from "@/lib/domain";
-import { AccountCard, EmptyPanel, PageHeader } from "@/components/business/Mobile";
 
 export default function HomePage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
 
-  async function refresh() {
-    setLoading(true);
-    try {
-      setAccounts(await accountService.getAccountList());
-    } catch (e) {
-      Toast.show({ content: (e as Error).message });
-    } finally {
-      setLoading(false);
-    }
-  }
-
   useEffect(() => {
-    refresh();
+    accountService.getAccountList()
+      .then(setAccounts)
+      .catch((e) => Toast.show({ content: (e as Error).message, type: "error" }))
+      .finally(() => setLoading(false));
   }, []);
 
-  async function deleteAccount(account: Account) {
-    const risk = await accountService.checkAccountDeleteRisk(account.id);
-    if (risk.runningCount > 0) {
-      Dialog.alert({ content: "当前账号存在执行中的任务，请等待任务结束后再删除。" });
-      return;
-    }
-    const content = risk.enabledScheduleCount > 0
-      ? `该账号存在 ${risk.enabledScheduleCount} 个启用中的定时任务。删除账号前需要处理这些任务。`
-      : "确认删除账号？删除后 Token 将被移除，历史执行记录仍会保留。";
-    const ok = await Dialog.confirm({ title: "删除账号", content, confirmText: risk.enabledScheduleCount > 0 ? "停用关联定时任务后删除" : "确认删除" });
-    if (!ok) return;
-    await accountService.deleteAccount(account.id);
-    Toast.show({ content: "账号已删除" });
-    await refresh();
-  }
+  const activeCount = accounts.filter((a) => a.status === "normal").length;
+  const channelCount = accounts.reduce((sum, a) => sum + (a.channelCount ?? 0), 0);
 
   return (
-    <main className="page-pad">
-      <PageHeader title="首页" action={<Button size="small" color="primary" fill="none" onClick={refresh}>刷新</Button>} />
+    <>
+      <PageHeader
+        title="运营工作台"
+        subtitle="AI 辅助的频道运营"
+        action={<Link href="/accounts/new"><Button size="sm" variant="ghost">＋ 账号</Button></Link>}
+      />
 
-      <Link href="/accounts/new" className="block">
-        <Button block color="primary" size="large">＋ 新增账号</Button>
-      </Link>
+      <section className="grid grid-cols-3 gap-3">
+        <StatCard label="活跃账号" value={activeCount} status="success" />
+        <StatCard label="频道" value={channelCount} status="primary" />
+        <StatCard label="任务" value={accounts.reduce((s, a) => s + (a.pendingTaskCount ?? 0), 0)} status="warning" />
+      </section>
 
-      <section className="mt-4">
+      <section className="mt-6">
+        <h2 className="mb-3 text-lg text-text">最近账号</h2>
         {loading ? (
-          <div className="surface rounded-lg p-4">
-            <Skeleton.Title animated />
-            <Skeleton.Paragraph lineCount={4} animated />
+          <div className="space-y-3">
+            <Skeleton height={120} className="block" />
+            <Skeleton height={120} className="block" />
           </div>
         ) : accounts.length === 0 ? (
-          <EmptyPanel
-            title="暂无绑定账号"
+          <EmptyState
+            title="暂无账号"
             hint="绑定 Token 后开始管理频道"
-            action={<Link href="/accounts/new"><Button color="primary">＋ 新增账号</Button></Link>}
+            action={<Link href="/accounts/new"><Button>＋ 新增账号</Button></Link>}
           />
         ) : (
           <ul className="space-y-3">
-            {accounts.map((account) => (
-              <li key={account.id}>
-                <AccountCard account={account} onDelete={() => deleteAccount(account)} />
-              </li>
-            ))}
+            {accounts.map((a) => <li key={a.id}><AccountCard account={a} /></li>)}
           </ul>
         )}
       </section>
-    </main>
+    </>
   );
 }
-

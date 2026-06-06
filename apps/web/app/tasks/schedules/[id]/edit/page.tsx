@@ -1,72 +1,96 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Button, Card, DatePicker, Dialog, Form, Input, List, Toast } from "antd-mobile";
-import { taskService, type ScheduledTask } from "@/lib/domain";
-import { BottomActionBar, EmptyPanel, PageHeader } from "@/components/business/Mobile";
+import { useParams, useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Toast } from "@/components/ui/toast";
+import { TopBar } from "@/components/layout/top-bar";
+import { Card } from "@/components/ui/card";
+import { Select } from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-picker";
+import { Radio } from "@/components/ui/radio";
+import { FieldLabel } from "@/components/patterns";
+import { accountService, taskService, type Account, type ScheduledTask } from "@/lib/domain";
 
-export default function EditSchedulePage({ params }: { params: { id: string } }) {
+export default function EditScheduledTaskPage() {
+  const params = useParams<{ id: string }>();
   const router = useRouter();
   const [task, setTask] = useState<ScheduledTask | null>(null);
-  const [time, setTime] = useState(() => timeToDate("23:30"));
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [executionMode, setExecutionMode] = useState<"immediate" | "schedule">("schedule");
+  const [scheduleType, setScheduleType] = useState<"daily" | "once">("daily");
+  const [scheduleAt, setScheduleAt] = useState<Date>(new Date());
+  const [accountId, setAccountId] = useState("");
 
   useEffect(() => {
-    taskService.getScheduledTaskDetail(params.id).then((detail) => {
-      setTask(detail);
-      setTime(timeToDate(detail?.scheduleConfig.time ?? "23:30"));
-    }).catch((e) => Toast.show({ content: (e as Error).message }));
+    Promise.all([taskService.getScheduledTask(params.id), accountService.getAccountList()])
+      .then(([t, acc]) => {
+        if (!t) return;
+        setTask(t);
+        setAccounts(acc);
+        setAccountId(t.accountId);
+        if (t.scheduleConfig) {
+          setScheduleType(t.scheduleConfig.type === "once" ? "once" : "daily");
+          setExecutionMode("schedule");
+        }
+      })
+      .catch((e) => Toast.show({ content: (e as Error).message, type: "error" }))
+      .finally(() => setLoading(false));
   }, [params.id]);
 
   async function save() {
-    const ok = await Dialog.confirm({ content: "修改后将影响后续自动执行。确定保存？" });
-    if (!ok) return;
+    if (!task) return;
     setBusy(true);
     try {
-      await taskService.updateScheduledTask(params.id);
-      Toast.show({ content: "修改已保存" });
-      router.replace(`/tasks/schedules/${params.id}`);
+      await taskService.updateScheduledTask(task.id, {
+        accountId,
+        scheduleConfig: executionMode === "schedule" ? {
+          type: scheduleType,
+          time: scheduleAt.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false }),
+          runAt: scheduleType === "once" ? scheduleAt.toISOString() : undefined,
+        } : undefined,
+      });
+      Toast.show({ content: "任务已更新", type: "success" });
+      router.replace(`/tasks/schedules/${task.id}`);
     } catch (e) {
-      Toast.show({ content: (e as Error).message });
+      Toast.show({ content: (e as Error).message, type: "error" });
     } finally {
       setBusy(false);
     }
   }
 
+  if (loading) return <main className="page-shell"><Skeleton height={300} className="block" /></main>;
+  if (!task) return <TopBar title="编辑任务" />;
+
   return (
-    <main className="page-pad pb-28">
-      <PageHeader title="编辑定时任务" backHref={`/tasks/schedules/${params.id}`} />
-      {!task ? <EmptyPanel title="任务不存在" /> : (
-        <Card className="adm-card-mobile">
-          <Form layout="vertical">
-            <Form.Item label="任务类型"><Input value={task.name || task.taskType} disabled /></Form.Item>
-            <Form.Item label="执行账号"><Input value={task.accountId} disabled /></Form.Item>
-            <Form.Item label="执行范围"><Input value={task.rangeType === "all" ? "全部" : "指定板块"} disabled /></Form.Item>
-            <Form.Item label="每日执行时间">
-              <DatePicker title="选择每日执行时间" value={time} precision="minute" onConfirm={setTime}>
-                {(value, actions) => (
-                  <List.Item clickable onClick={actions.open} extra="选择">{formatTime(value ?? time)}</List.Item>
-                )}
-              </DatePicker>
-            </Form.Item>
-          </Form>
+    <>
+      <TopBar title="编辑任务" />
+      <main className="page-shell space-y-4">
+        <Card className="space-y-4">
+          <div>
+            <FieldLabel required>执行账号</FieldLabel>
+            <Select value={accountId} onChange={setAccountId} options={accounts.map((a) => ({ label: `${a.nickname || a.qq}`, value: a.id }))} title="选择执行账号" placeholder="请选择执行账号" />
+          </div>
+          <div>
+            <FieldLabel>执行方式</FieldLabel>
+            <div className="space-y-2">
+              <Radio checked={executionMode === "schedule"} onChange={() => setExecutionMode("schedule")}>定时执行</Radio>
+            </div>
+          </div>
+          <div>
+            <FieldLabel>定时规则</FieldLabel>
+            <Select value={scheduleType} onChange={(v) => setScheduleType(v as "daily" | "once")} options={[{ label: "每天", value: "daily" }, { label: "单次", value: "once" }]} />
+          </div>
+          <div>
+            <FieldLabel>{scheduleType === "daily" ? "每日执行时间" : "执行日期和时间"}</FieldLabel>
+            <DatePicker value={scheduleAt} onChange={setScheduleAt} mode={scheduleType === "daily" ? "time" : "datetime"} />
+          </div>
         </Card>
-      )}
-      <BottomActionBar>
-        <Button block color="primary" size="large" loading={busy} onClick={save}>保存修改</Button>
-      </BottomActionBar>
-    </main>
+        <Button block size="lg" loading={busy} onClick={save}>保存</Button>
+      </main>
+    </>
   );
-}
-
-function timeToDate(value: string) {
-  const [hour = "23", minute = "30"] = value.split(":");
-  const d = new Date();
-  d.setHours(Number(hour), Number(minute), 0, 0);
-  return d;
-}
-
-function formatTime(date: Date) {
-  return date.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false });
 }
