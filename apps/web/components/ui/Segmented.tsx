@@ -35,7 +35,7 @@ export function Segmented<T extends string>({ value, onChange, options, classNam
             aria-selected={active}
             onClick={() => onChange(opt.value)}
             className={cn(
-              "tap h-9 rounded text-small font-medium transition-colors duration-180 ease-out-quint",
+              "tap h-9 rounded text-small font-medium transition-colors duration-[180ms] ease-out-quint",
               active ? "bg-ink text-ink-inverse" : "text-ink-2 hover:text-ink",
             )}
           >
