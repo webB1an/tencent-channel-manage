@@ -3,8 +3,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import type { ChannelView, GuildView, ModelView, TaskRunView, TaskView, TokenView } from "@tcm/shared";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import { Segmented } from "@/components/ui/Segmented";
+import { TaskCard } from "@/components/patterns/TaskCard";
+import { EmptyState } from "@/components/patterns/EmptyState";
+import { cn } from "@/lib/utils";
 
 type Kind = "INSPECTION" | "HOT_SUMMARY";
+type Schedule = "IMMEDIATE" | "DAILY";
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState<TaskView[]>([]);
@@ -17,9 +25,9 @@ export default function TasksPage() {
   const [tokenId, setTokenId] = useState("");
   const [guildId, setGuildId] = useState("");
   const [channelId, setChannelId] = useState("");
-  const [scheduleMode, setScheduleMode] = useState<"IMMEDIATE" | "DAILY">("DAILY");
+  const [scheduleMode, setScheduleMode] = useState<Schedule>("DAILY");
   const [busy, setBusy] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
 
   async function refresh() {
     const [ts, tk, ms] = await Promise.all([api.listTasks(), api.listTokens(), api.listModels()]);
@@ -46,15 +54,18 @@ export default function TasksPage() {
   }, [guildId]);
 
   const selectedModel = useMemo(() => models[0], [models]);
-  const canCreate = tokenId && guildId && channelId && (kind !== "INSPECTION" || selectedModel);
+  const canCreate = Boolean(tokenId && guildId && channelId && (kind !== "INSPECTION" || selectedModel));
 
   async function syncChannels() {
     if (!guildId) return;
     setBusy("sync-channels");
+    setMessage(null);
     try {
       const res = await api.syncChannels(guildId);
-      setMessage(`已同步 ${res.count} 个板块`);
+      setMessage({ kind: "ok", text: `已同步 ${res.count} 个板块` });
       setChannels(await api.listChannels(guildId));
+    } catch (e) {
+      setMessage({ kind: "err", text: (e as Error).message });
     } finally {
       setBusy(null);
     }
@@ -74,10 +85,10 @@ export default function TasksPage() {
         scheduleMode,
         defaultTime: "23:30",
       });
-      setMessage(res.runId ? "任务已创建并开始执行" : "任务已创建");
+      setMessage({ kind: "ok", text: res.runId ? "任务已创建并开始执行" : "任务已创建" });
       await refresh();
-    } catch (error) {
-      setMessage((error as Error).message);
+    } catch (e) {
+      setMessage({ kind: "err", text: (e as Error).message });
     } finally {
       setBusy(null);
     }
@@ -85,94 +96,134 @@ export default function TasksPage() {
 
   async function trigger(id: string) {
     setBusy(id);
+    setMessage(null);
     try {
       await api.runTask(id);
       await refresh();
+    } catch (e) {
+      setMessage({ kind: "err", text: (e as Error).message });
     } finally {
       setBusy(null);
     }
   }
 
   return (
-    <main className="px-5 pt-6">
-      <header className="flex items-end justify-between">
-        <h1 className="text-xl font-semibold text-ink">任务</h1>
+    <main className="px-5 pt-8 pb-12">
+      <header>
+        <h1 className="text-d2 text-ink">任务</h1>
+        <p className="mt-1 text-body text-ink-2">配置你的自动化运营。</p>
+        <div className="mt-5 h-px w-8 bg-ink" />
       </header>
-      {message && <p className="mt-3 rounded-xl bg-brand-soft px-3 py-2 text-sm text-brand">{message}</p>}
 
-      <section className="mt-5 rounded-2xl bg-white p-4 shadow-card">
-        <h2 className="text-sm font-medium text-ink">新建任务</h2>
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <button onClick={() => setKind("INSPECTION")} className={choice(kind === "INSPECTION")}>频道巡检</button>
-          <button onClick={() => setKind("HOT_SUMMARY")} className={choice(kind === "HOT_SUMMARY")}>每日热门</button>
-        </div>
+      {message && (
+        <p
+          className={cn(
+            "mt-5 rounded-md px-3 py-2 text-small",
+            message.kind === "ok" ? "bg-lime text-lime-ink" : "bg-risk-high/10 text-risk-high",
+          )}
+        >
+          {message.text}
+        </p>
+      )}
 
-        {kind === "INSPECTION" && !selectedModel && (
-          <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-700">巡检需要先在“我的”配置模型。</p>
-        )}
-
-        <div className="mt-4 space-y-3">
-          <select className="input" value={tokenId} onChange={(e) => { setTokenId(e.target.value); setGuildId(""); setChannelId(""); }}>
-            <option value="">选择 Token</option>
-            {tokens.map((t) => <option key={t.id} value={t.id}>{t.label} · {t.status}</option>)}
-          </select>
-
-          <select className="input" value={guildId} onChange={(e) => { setGuildId(e.target.value); setChannelId(""); }}>
-            <option value="">选择频道</option>
-            {guilds.map((g) => <option key={g.id} value={g.id}>{g.name} · {g.role ?? "成员"}</option>)}
-          </select>
-
-          <div className="flex gap-2">
-            <select className="input flex-1" value={channelId} onChange={(e) => setChannelId(e.target.value)}>
-              <option value="">选择板块</option>
-              {channels.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-            <button onClick={syncChannels} disabled={!guildId || busy === "sync-channels"} className="tap rounded-xl bg-paper px-3 text-sm text-ink disabled:opacity-50">
-              同步
-            </button>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <button onClick={() => setScheduleMode("IMMEDIATE")} className={choice(scheduleMode === "IMMEDIATE")}>立即执行</button>
-            <button onClick={() => setScheduleMode("DAILY")} className={choice(scheduleMode === "DAILY")}>每日 23:30</button>
-          </div>
-
-          <p className="text-xs leading-5 text-ink-soft">
-            {kind === "INSPECTION" ? "扫描当天帖子，最多 500 条，已巡检帖子自动跳过。" : "统计上海时区当天发布的帖子，按当前点赞数取 Top 10。"}
-          </p>
-
-          <button disabled={!canCreate || busy === "create"} onClick={createTask} className="tap w-full rounded-xl bg-brand py-3 text-sm text-white disabled:opacity-50">
-            {busy === "create" ? "创建中..." : scheduleMode === "IMMEDIATE" ? "保存并执行" : "保存任务"}
-          </button>
+      <section className="mt-7">
+        <SectionTitle step="1" title="选择任务类型" />
+        <div className="mt-3">
+          <Segmented<Kind>
+            value={kind}
+            onChange={setKind}
+            options={[
+              { value: "INSPECTION", label: "频道巡检" },
+              { value: "HOT_SUMMARY", label: "每日热门" },
+            ]}
+          />
         </div>
       </section>
 
       <section className="mt-6">
-        <h2 className="text-sm font-medium text-ink-soft">我的任务</h2>
-        <ul className="mt-3 space-y-3">
-          {tasks.map((t) => {
-            const last = runsByTask[t.id]?.[0];
-            return (
-              <li key={t.id} className="rounded-2xl bg-white p-4 shadow-card">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-base font-medium text-ink">{t.type === "INSPECTION" ? "频道巡检" : "每日热门"}</p>
-                    <p className="mt-0.5 text-xs text-ink-soft">{t.scheduleMode === "DAILY" ? `每日 · ${t.defaultTime}` : "立即任务"} · {t.enabled ? "启用" : "停用"}</p>
-                  </div>
-                  <button onClick={() => trigger(t.id)} disabled={busy === t.id} className="tap rounded-full bg-brand-soft px-3 py-1.5 text-xs text-brand disabled:opacity-60">
-                    {busy === t.id ? "排队中..." : "运行一次"}
-                  </button>
-                </div>
-                {last && <p className="mt-3 text-xs text-ink-soft">最近：{last.status} · {new Date(last.createdAt).toLocaleString()}</p>}
+        <SectionTitle step="2" title="关联频道" />
+        <div className="mt-3 rounded-lg bg-paper-2 p-4 space-y-3">
+          <Select value={tokenId} onChange={(e) => { setTokenId(e.target.value); setGuildId(""); setChannelId(""); }}>
+            <option value="">选择 Token</option>
+            {tokens.map((t) => <option key={t.id} value={t.id}>{t.label} · {t.status}</option>)}
+          </Select>
+          <Select value={guildId} onChange={(e) => { setGuildId(e.target.value); setChannelId(""); }}>
+            <option value="">选择频道</option>
+            {guilds.map((g) => <option key={g.id} value={g.id}>{g.name} · {g.role ?? "成员"}</option>)}
+          </Select>
+          <div className="flex gap-2">
+            <Select className="flex-1" value={channelId} onChange={(e) => setChannelId(e.target.value)}>
+              <option value="">选择板块</option>
+              {channels.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </Select>
+            <Button variant="secondary" size="md" onClick={syncChannels} disabled={!guildId || busy === "sync-channels"} loading={busy === "sync-channels"}>
+              同步
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {kind === "INSPECTION" && (
+        <section className="mt-6">
+          <SectionTitle step="3" title="模型" />
+          <div className="mt-3 rounded-md bg-paper-2 px-3 py-2 text-small text-ink-2">
+            当前：{selectedModel ? selectedModel.model : "未配置"}
+            {!selectedModel && <span className="ml-2 text-risk-mid">先去我的配置</span>}
+          </div>
+        </section>
+      )}
+
+      <section className="mt-6">
+        <SectionTitle step={kind === "INSPECTION" ? "4" : "3"} title="执行计划" />
+        <div className="mt-3">
+          <Segmented<Schedule>
+            value={scheduleMode}
+            onChange={setScheduleMode}
+            options={[
+              { value: "IMMEDIATE", label: "立即执行" },
+              { value: "DAILY", label: "每日 23:30" },
+            ]}
+          />
+        </div>
+        <p className="mt-3 text-mini text-ink-3 leading-relaxed">
+          {kind === "INSPECTION" ? "扫描当天帖子，最多 500 条，已巡检帖子自动跳过。" : "统计上海时区当天发布的帖子，按当前点赞数取 Top 10。"}
+        </p>
+      </section>
+
+      <div className="mt-7">
+        <Button variant="primary" size="lg" fullWidth onClick={createTask} disabled={!canCreate} loading={busy === "create"}>
+          {scheduleMode === "IMMEDIATE" ? "保存并执行" : "保存任务"}
+        </Button>
+      </div>
+
+      <section className="mt-10">
+        <div className="flex items-end justify-between">
+          <h2 className="text-h2 text-ink">我的任务</h2>
+          <span className="text-micro text-ink-3">· {tasks.length}</span>
+        </div>
+        {tasks.length === 0 ? (
+          <div className="mt-3 rounded-lg border border-line bg-paper">
+            <EmptyState icon="folder" title="还没有任务" hint="上面配置一个开始" />
+          </div>
+        ) : (
+          <ul className="mt-3 space-y-3 stagger">
+            {tasks.map((t) => (
+              <li key={t.id}>
+                <TaskCard task={t} lastRun={runsByTask[t.id]?.[0]} onTrigger={() => trigger(t.id)} busy={busy === t.id} />
               </li>
-            );
-          })}
-        </ul>
+            ))}
+          </ul>
+        )}
       </section>
     </main>
   );
 }
 
-function choice(active: boolean) {
-  return "tap rounded-xl px-3 py-2.5 text-sm " + (active ? "bg-brand text-white" : "bg-paper text-ink");
+function SectionTitle({ step, title }: { step: string; title: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-micro font-mono text-ink-3">{step}</span>
+      <h3 className="text-h3 text-ink-2">{title}</h3>
+    </div>
+  );
 }
