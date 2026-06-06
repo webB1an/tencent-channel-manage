@@ -1,54 +1,34 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import { cn } from "@/lib/utils";
+import { usePathname, useRouter } from "next/navigation";
+import { TabBar } from "antd-mobile";
 
 const tabs = [
-  { href: "/home", label: "首页", icon: HomeIcon },
-  { href: "/tasks", label: "任务", icon: TaskIcon },
-  { href: "/results", label: "结果", icon: ResultIcon },
-  { href: "/profile", label: "我的", icon: ProfileIcon },
+  { href: "/", label: "首页", icon: HomeIcon },
+  { href: "/tasks", label: "任务中心", icon: TaskIcon },
+  { href: "/mine", label: "我的", icon: ProfileIcon },
 ] as const;
 
 export function BottomNav() {
   const pathname = usePathname();
+  const router = useRouter();
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-20 mx-auto max-w-[480px] bg-paper border-t border-line"
-      style={{ paddingBottom: "var(--safe-bottom)" }}
+      className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-[430px] border-t border-line bg-paper-2/95 shadow-[0_-10px_28px_-24px_rgb(15_23_42/0.45)] backdrop-blur"
+      style={{ height: 78, paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       aria-label="主导航"
     >
-      <ul className="grid grid-cols-5 items-center px-1.5">
+      <TabBar
+        activeKey={pathname === "/" ? "/" : tabs.find((t) => t.href !== "/" && pathname?.startsWith(t.href))?.href ?? "/"}
+        onChange={(key) => router.push(key)}
+        safeArea
+        className="h-full"
+      >
         {tabs.map((t) => {
-          const active = pathname?.startsWith(t.href);
           const Icon = t.icon;
-          return (
-            <li key={t.href} className="flex justify-center">
-              <Link
-                href={t.href}
-                aria-current={active ? "page" : undefined}
-                aria-label={t.label}
-                className="tap h-14 flex items-center"
-              >
-                <span
-                  className={cn(
-                    "flex flex-col items-center justify-center gap-0.5 px-4 py-1.5 rounded-full transition-colors duration-[180ms]",
-                    active ? "bg-ink text-ink-inverse" : "text-ink-3",
-                  )}
-                >
-                  <Icon className={active ? "text-ink-inverse" : "text-ink-3"} />
-                  <span className="text-micro">{t.label}</span>
-                </span>
-              </Link>
-            </li>
-          );
+          return <TabBar.Item key={t.href} title={t.label} icon={(active) => <Icon className={active ? "text-accent" : "text-ink-3"} />} />;
         })}
-        <li className="flex justify-center">
-          <ThemeToggle />
-        </li>
-      </ul>
+      </TabBar>
     </nav>
   );
 }
@@ -65,13 +45,6 @@ function TaskIcon({ className = "" }: { className?: string }) {
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
       <rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" strokeWidth="1.6" />
       <path d="M8 3v4M16 3v4M4 10h16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  );
-}
-function ResultIcon({ className = "" }: { className?: string }) {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
-      <path d="M4 20V8m6 12V4m6 16v-7m4 7H4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
   );
 }

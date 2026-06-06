@@ -1,4 +1,5 @@
 import "./globals.css";
+import "antd-mobile/es/global";
 import type { ReactNode } from "react";
 import type { Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
@@ -48,7 +49,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="font-sans">
-        <div className="mx-auto min-h-screen w-full max-w-[480px] bg-paper">
+        <div className="app-shell mx-auto min-h-screen w-full max-w-[430px]">
           {children}
         </div>
       </body>
