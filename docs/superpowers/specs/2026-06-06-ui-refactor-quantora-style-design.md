@@ -2,7 +2,7 @@
 
 **Date:** 2026-06-06
 **Status:** Draft — awaiting user review
-**Scope:** `apps/web` 的全部页面、底部导航、TopBar、表单、卡片、token 系统、组件基础层
+**Scope:** `apps/web` 的 10 个现存页面、底部导航、TopBar、表单、卡片、token 系统、组件基础层
 **Reference:** `D:\Work\web\quantora-ai-h5`（Vue 3 + Vant 4 H5 移动端项目）
 **Out of scope:** 后端 / API / 新功能 / 新增 npm 依赖（除 `clsx` / `tailwind-merge` 之类工具外）/ Prisma schema / 数据模型
 
@@ -165,8 +165,6 @@ apps/web/
       layout.tsx
       page.tsx                # home
       mine/page.tsx
-      profile/page.tsx
-      results/page.tsx
       tasks/page.tsx
     accounts/
       new/page.tsx
@@ -178,7 +176,6 @@ apps/web/
       records/[id]/page.tsx
       schedules/[id]/page.tsx
       schedules/[id]/edit/page.tsx
-    login/page.tsx
   tailwind.config.ts          # 重写
 ```
 
@@ -206,8 +203,8 @@ apps/web/
 | `Tabs` | `value`, `onChange`, `items: {key,label}[]` | 顶部下划线（active 段 2px `--primary-color`） |
 | `TabBar` | `activeKey`, `onChange`, `items: {key,label,icon,href?}[]` | 底部 78px 白底 + top shadow；icon 24px，label 10px |
 | `Badge` | `variant: 'primary'\|'success'\|'warning'\|'danger'\|'neutral'`, `text` | pill 圆角 999，高度 18，padding 0 6px |
-| `Card` | `className?`, `padding?: 'sm'\|'md'\|'lg'` | 白底 + 1px `--border-color` + radius 12 |
-| `Skeleton` | `width?`, `height?`, `rounded?` | 浅灰底（`--bg-page`）无 shimmer 动画 |
+| `Card` | `className?`, `padding?: 'sm'\|'md'\|'lg'` | 白底 + 1px `--border-color` + radius 12；padding sm=12 / md=16 / lg=20 |
+| `Skeleton` | `width?`, `height?`, `rounded?` | 底色 `--bg-page`（淡薰衣草，在白底 surface 上略深），无 shimmer 动画 |
 | `Empty` | `icon?`, `title`, `hint?`, `action?` | 居中堆叠，单色线性 icon 48px |
 | `ListRow` | `title`, `description?`, `prefix?`, `suffix?`, `onClick?` | 高度 56，下边线 1px；`onClick` 整行 `scale(0.99)` 80ms |
 | `StatusDot` | `status: 'success'\|'warning'\|'danger'\|'neutral'`, `size?: 'sm'\|'md'` | 6 / 8 px 圆点 |
@@ -359,7 +356,7 @@ apps/web/
 
 **`app/globals.css`（重写）**
 
-- 替换为 8 个新颜色变量
+- 替换为 12 个新颜色变量（与第 1.1 节 token 一一对应）
 - 删除 `.dark`、`.theme-switching`、所有 `.adm-*` 覆盖、`.stagger`、`.page-enter`、`.skeleton`、`.risk-pulse`、`.tap`
 - 保留并改写：`.app-shell`、`.page-pad`（重命名为 `.page-shell`）
 - body 背景 = radial 顶部绿光 + 浅蓝线性渐变
@@ -417,19 +414,6 @@ apps/web/
 - 下方多个分组，每组 `ListRow` 列出菜单项
 - 退出登录：`Button block variant="danger"` + `Dialog` 二次确认
 
-**`app/(tabs)/profile/page.tsx`**
-
-- 三个分组（账号 / Token / 模型）都用 Card 包裹
-- 账号分组用 `ListRow`
-- Token 分组用 `TokenRow`
-- 模型分组用 `ModelRow`
-
-**`app/(tabs)/results/page.tsx`**
-
-- 顶部 `Tabs`（成功 / 失败 / 全部）
-- 列表用 `HotTopicItem`
-- 二次确认用 `Sheet`
-
 ### 4.4 accounts/* 路由
 
 - `accounts/new/page.tsx` — TopBar + 白底 Card 表单（Input / Textarea / Select）+ 底部 sticky `Button block size="lg" variant="primary"`
@@ -444,18 +428,7 @@ apps/web/
 - `tasks/schedules/[id]/edit/page.tsx` — TopBar + 同 new 表单
 - `tasks/records/[id]/page.tsx` — TopBar + 状态行 Badge + StatusDot + 详情 ListRow 分组
 
-### 4.6 login
-
-**`login/page.tsx`**
-
-- 整页继承 `body` 渐变背景
-- 居中白底 Card：max-width 320，padding 24，radius 12
-- 顶部 brand wordmark（24px 700 青蓝）+ 副标题（12px 灰）
-- 中部账号名 Input + Token Input（mono）
-- 底部 `Button block size="lg" variant="primary"`
-- 错误用 Input 的 `error` prop + 红边框 + 12px 提示
-
-### 4.7 components 整理
+### 4.6 components 整理
 
 **`components/business/Mobile.tsx`**
 
@@ -510,7 +483,7 @@ apps/web/
 - [ ] 字体栈统一 PingFang SC，无 Inter / JetBrains Mono 回退痕迹
 - [ ] 主色按钮 / 激活 Tab 下划线 / 链接 = 青蓝
 
-**首页 / 任务 / 我的 / profile / results / accounts / tasks / login 8 处**
+**首页 / 任务 / 我的 / accounts / tasks 5 处（去掉 login / profile / results 后）**
 - [ ] 页面大标题 = text-4xl 700
 - [ ] 输入框聚焦时边色变青蓝
 - [ ] 错误信息显示在字段下方，不破坏版式
@@ -543,10 +516,10 @@ apps/web/
 ### 5.4 收尾扫尾
 
 - `grep -r "antd-mobile" apps/web` 确认 0 命中
-- `grep -r "Inter\|JetBrains" apps/web` 确认 0 命中（除可能的注释 / public 资源）
-- `grep -r "ink-\|paper-\|line-\|lime-\|accent-\|warm-\|risk-" apps/web/components apps/web/app` 确认 0 命中
+- `grep -rE "font-(sans|display|mono)|Inter|JetBrains" apps/web/app apps/web/components apps/web/tailwind.config.ts apps/web/lib` 确认 0 命中（除 `lib/cn.ts` 这种工具文件名外）
+- `grep -rE "ink-[0-9]|paper-[0-9]|line-strong|paper-sunken|lime-ink|accent-soft|risk-(high|mid|low)" apps/web/app apps/web/components` 确认 0 命中
 - `grep -r "NumberTicker" apps/web` 确认 0 命中
-- `grep -r "stagger\|page-enter\|shimmer\|pulseEdge\|theme-switching" apps/web` 确认 0 命中
+- `grep -rE "stagger|page-enter|shimmer|pulseEdge|theme-switching" apps/web/app apps/web/components apps/web/lib apps/web/tailwind.config.ts` 确认 0 命中
 
 ---
 
@@ -602,8 +575,8 @@ apps/web/
 2. **Primitive 层**：16 个 `components/ui/*` + `lib/a11y.ts`
 3. **Layout 组件**：`TopBar` / `BottomNav` / `Page`
 4. **Pattern 层**：9 个 `components/patterns/*`（重写，删除 NumberTicker）
-5. **Tabs 入口 & tabs 4 页 + profile + results** 重写
-6. **accounts/* 4 页 + tasks/* 4 页 + login 1 页** 重写
+5. **Tabs 入口 & tabs 3 页（home / mine / tasks）** 重写
+6. **accounts/* 4 页 + tasks/* 4 页** 重写
 7. **业务包 barrel**：`components/business/Mobile.tsx` 重写为纯 re-export
 8. **收尾扫尾**：5.4 节 grep 清单
 
