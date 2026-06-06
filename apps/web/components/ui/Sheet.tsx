@@ -24,6 +24,7 @@ export function Sheet({
   secondaryAction,
   className,
 }: SheetProps) {
+  const titleId = React.useId();
   React.useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -34,8 +35,6 @@ export function Sheet({
   }, [open, onClose]);
 
   if (!open) return null;
-
-  const titleId = React.useId();
 
   return (
     <div
