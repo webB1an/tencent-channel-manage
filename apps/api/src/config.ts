@@ -1,4 +1,22 @@
-import "dotenv/config";
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
+import dotenv from "dotenv";
+
+function loadEnv() {
+  let dir = process.cwd();
+  while (true) {
+    const envPath = join(dir, ".env");
+    if (existsSync(envPath)) {
+      dotenv.config({ path: envPath });
+      return;
+    }
+    const parent = dirname(dir);
+    if (parent === dir) return;
+    dir = parent;
+  }
+}
+
+loadEnv();
 
 function need(name: string, fallback?: string): string {
   const v = process.env[name] ?? fallback;

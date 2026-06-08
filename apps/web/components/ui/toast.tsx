@@ -20,9 +20,11 @@ export const Toast = {
 
 export function ToastHost() {
   const [items, setItems] = useState<ToastState[]>([]);
+  const [mounted, setMounted] = useState(false);
   const timers = useRef<Set<number>>(new Set());
 
   useEffect(() => {
+    setMounted(true);
     const onItem = (t: ToastState) => {
       setItems((arr) => [...arr, t]);
       const id = window.setTimeout(() => {
@@ -39,7 +41,7 @@ export function ToastHost() {
     };
   }, []);
 
-  if (typeof document === "undefined") return null;
+  if (!mounted) return null;
   return createPortal(
     <div className="pointer-events-none fixed inset-x-0 top-0 z-[60] flex flex-col items-center gap-2 px-4 pt-[calc(16px+env(safe-area-inset-top))]">
       {items.map((t) => (

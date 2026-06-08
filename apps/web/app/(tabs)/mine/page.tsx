@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { TopBar } from "@/components/layout/top-bar";
 import { Card } from "@/components/ui/card";
 import { ListRow } from "@/components/ui/list-row";
@@ -8,16 +9,31 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Icon } from "@/components/ui/icon";
 import { Toast } from "@/components/ui/toast";
-import { SectionHeader, StatTile } from "@/components/patterns";
+import { api, setToken } from "@/lib/api";
 
 export default function MinePage() {
+  const router = useRouter();
   const [confirmClear, setConfirmClear] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   function clearCache() {
     localStorage.removeItem("tcm_disabled_task_ids");
     setConfirmClear(false);
     Toast.show({ content: "缓存已清理", type: "success" });
+  }
+
+  async function logout() {
+    setLoggingOut(true);
+    try {
+      await api.logout().catch(() => null);
+      setToken(null);
+      setConfirmLogout(false);
+      Toast.show({ content: "已退出登录", type: "success" });
+      router.replace("/login");
+    } finally {
+      setLoggingOut(false);
+    }
   }
 
   return (
@@ -134,7 +150,7 @@ export default function MinePage() {
             <Button block variant="secondary" onClick={() => setConfirmLogout(false)}>
               取消
             </Button>
-            <Button block variant="danger" onClick={() => { setConfirmLogout(false); Toast.show({ content: "已退出登录", type: "success" }); }}>
+            <Button block variant="danger" loading={loggingOut} onClick={logout}>
               确认退出
             </Button>
           </>

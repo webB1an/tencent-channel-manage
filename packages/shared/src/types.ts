@@ -141,5 +141,6 @@ export interface HotSummaryView {
 export interface ApiError {
   error: string;
   message: string;
+  issues?: Array<{ field: string; message: string }>;
   details?: unknown;
 }

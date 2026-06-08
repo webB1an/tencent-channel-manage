@@ -25,6 +25,7 @@ export function BottomNav() {
     <TabBar
       activeKey={activeKey}
       items={items}
+      onChange={(key) => router.push(key)}
     />
   );
 }

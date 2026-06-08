@@ -39,11 +39,18 @@ export type LoginInput = z.infer<typeof loginSchema>;
 // ---------- channel token ----------
 
 export const createTokenSchema = z.object({
-  label: z.string().min(1).max(64),
+  label: z.string().min(1, "名称不能为空").max(64, "名称不能超过 64 个字符"),
   /// Plain token. Received over HTTPS, never logged, encrypted at rest.
-  secret: z.string().min(8).max(4096),
+  secret: z.string().min(8, "Token 至少需要 8 位").max(4096, "Token 不能超过 4096 位"),
 });
 export type CreateTokenInput = z.infer<typeof createTokenSchema>;
+
+export const updateTokenSchema = createTokenSchema
+  .partial()
+  .refine((v) => v.label !== undefined || v.secret !== undefined, {
+    message: "至少需要修改一个字段",
+  });
+export type UpdateTokenInput = z.infer<typeof updateTokenSchema>;
 
 export const updateTokenStatusSchema = z.object({
   status: z.nativeEnum(TokenStatus),

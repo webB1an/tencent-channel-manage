@@ -110,6 +110,7 @@ export interface ExecutionRecord {
 }
 
 type AccountProfile = Record<string, { qq?: string; nickname?: string; remark?: string; deleted?: boolean }>;
+type GuildWithChannels = GuildView & { channels?: ChannelView[] };
 
 const PROFILE_KEY = "tcm_account_profiles";
 const DISABLED_TASK_KEY = "tcm_disabled_task_ids";
@@ -194,7 +195,7 @@ async function accountLookup() {
 
 async function channelLookup() {
   const guilds = await api.listGuilds();
-  const pairs = await Promise.all(guilds.map(async (g) => [g, await api.listChannels(g.id)] as const));
+  const pairs = guilds.map((g) => [g, channelsOf(g)] as const);
   const rows: Array<Channel & { guild: GuildView }> = [];
   for (const [guild, channels] of pairs) {
     for (const channel of channels) rows.push(mapChannel(guild, channel));
@@ -215,15 +216,33 @@ function mapChannel(guild: GuildView, channel: ChannelView): ChannelWithGuild {
   };
 }
 
+function mapGuild(guild: GuildView): ChannelWithGuild {
+  return {
+    id: guild.id,
+    accountId: guild.tokenId,
+    channelId: guild.guildId,
+    name: guild.name,
+    status: "normal",
+    sectionCount: channelsOf(guild).length,
+    lastRunAt: guild.cachedAt,
+    guild,
+  };
+}
+
+function channelsOf(guild: GuildView): ChannelView[] {
+  return (guild as GuildWithChannels).channels ?? [];
+}
+
 export const accountService = {
   async getAccountList(): Promise<Account[]> {
     const [tokens, tasks] = await Promise.all([api.listTokens(), api.listTasks()]);
     const profileMap = profiles();
-    const guildRows = await Promise.all(tokens.map((t) => api.listGuilds(t.id).catch(() => [])));
+    const guildRows = await Promise.all(tokens.map((t) => api.listGuilds(t.id).catch(() => [] as GuildWithChannels[])));
     return tokens
       .filter((t) => !profileMap[t.id]?.deleted)
       .map((t, index) => {
         const profile = profileMap[t.id] ?? {};
+        const channelCount = guildRows[index]?.length ?? 0;
         return {
           id: t.id,
           qq: profile.qq || `未填写-${index + 1}`,
@@ -231,7 +250,7 @@ export const accountService = {
           nickname: profile.nickname || t.label,
           remark: profile.remark,
           status: mapTokenStatus(t.status),
-          channelCount: guildRows[index]?.length ?? 0,
+          channelCount,
           pendingTaskCount: tasks.filter((task) => task.tokenId === t.id && task.enabled).length,
           createdAt: t.createdAt,
         };
@@ -248,7 +267,11 @@ export const accountService = {
   },
   async updateAccount(accountId: string, data: { qq?: string; token?: string; nickname?: string; remark?: string }) {
     saveProfile(accountId, { qq: data.qq, nickname: data.nickname, remark: data.remark });
-    if (data.token) await api.checkToken(accountId).catch(() => undefined);
+    const tokenPatch: { label?: string; secret?: string } = {};
+    if (data.nickname !== undefined || data.qq !== undefined) tokenPatch.label = data.nickname || data.qq || "未命名账号";
+    if (data.token) tokenPatch.secret = data.token;
+    if (tokenPatch.label !== undefined || tokenPatch.secret !== undefined) await api.updateToken(accountId, tokenPatch);
+    if (data.token) await api.checkToken(accountId);
   },
   async refreshAccountStatus(accountId: string) {
     return api.checkToken(accountId);
@@ -269,14 +292,19 @@ export const accountService = {
 export const channelService = {
   async getChannelsByAccount(accountId: string): Promise<ChannelWithGuild[]> {
     const guilds = await api.listGuilds(accountId);
-    const pairs = await Promise.all(guilds.map(async (g) => [g, await api.listChannels(g.id)] as const));
-    return pairs.flatMap(([guild, channels]) => channels.map((channel) => mapChannel(guild, channel)));
+    return guilds.map(mapGuild);
   },
   async getChannelDetail(accountId: string, channelId: string) {
     return (await this.getChannelsByAccount(accountId)).find((c) => c.id === channelId || c.channelId === channelId) ?? null;
   },
   async refreshChannels(accountId: string) {
-    return api.syncGuilds(accountId);
+    await api.syncGuilds(accountId);
+    const guilds = await api.listGuilds(accountId);
+    const results = await Promise.all(guilds.map((guild) => api.syncChannels(guild.id).catch(() => ({ ok: false, count: 0 }))));
+    return {
+      ok: results.some((result) => result.ok),
+      count: results.reduce((sum, result) => sum + result.count, 0),
+    };
   },
   async getSectionsByChannel(accountId: string, channelId: string): Promise<Section[]> {
     const channel = await this.getChannelDetail(accountId, channelId);
@@ -311,11 +339,15 @@ export const taskService = {
   }) {
     const channel = await channelService.getChannelDetail(data.accountId, data.channelId);
     if (!channel) throw new Error("请选择执行频道");
+    const sections = await channelService.getSectionsByChannel(data.accountId, data.channelId);
+    const selectedSectionId = Array.isArray(data.taskConfig?.sectionIds) ? data.taskConfig.sectionIds[0] : undefined;
+    const targetSection = sections.find((s) => s.id === selectedSectionId) ?? sections[0];
+    if (!targetSection) throw new Error("该频道没有可执行板块,请先刷新频道");
     return api.createTask({
       type: data.taskType,
       tokenId: data.accountId,
-      guildId: channel.guild.id,
-      channelId: channel.id,
+      guildId: channel.id,
+      channelId: targetSection.id,
       scheduleMode: "DAILY",
       defaultTime: data.scheduleConfig.time ?? "23:30",
     });
@@ -379,11 +411,15 @@ export const executionService = {
   }) {
     const channel = await channelService.getChannelDetail(data.accountId, data.channelId);
     if (!channel) throw new Error("请选择执行频道");
+    const sections = await channelService.getSectionsByChannel(data.accountId, data.channelId);
+    const selectedSectionId = Array.isArray(data.taskConfig?.sectionIds) ? data.taskConfig.sectionIds[0] : undefined;
+    const targetSection = sections.find((s) => s.id === selectedSectionId) ?? sections[0];
+    if (!targetSection) throw new Error("该频道没有可执行板块,请先刷新频道");
     return api.createTask({
       type: data.taskType,
       tokenId: data.accountId,
-      guildId: channel.guild.id,
-      channelId: channel.id,
+      guildId: channel.id,
+      channelId: targetSection.id,
       scheduleMode: "IMMEDIATE",
       defaultTime: "23:30",
     });

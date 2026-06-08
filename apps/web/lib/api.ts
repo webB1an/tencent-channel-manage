@@ -17,6 +17,12 @@ import type {
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:4000";
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "1";
 
+type ApiErrorPayload = {
+  error?: string;
+  message?: string;
+  issues?: Array<{ field: string; message: string }>;
+};
+
 function getToken(): string | null {
   if (typeof window === "undefined") return null;
   return window.localStorage.getItem("tcm_token");
@@ -30,7 +36,14 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, { ...init, headers });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`${res.status} ${text}`);
+    try {
+      const payload = JSON.parse(text) as ApiErrorPayload;
+      const issueText = payload.issues?.map((issue) => `${issue.field}: ${issue.message}`).join("; ");
+      throw new Error(payload.message ?? issueText ?? payload.error ?? `${res.status} ${text}`);
+    } catch (err) {
+      if (err instanceof SyntaxError) throw new Error(`${res.status} ${text}`);
+      throw err;
+    }
   }
   return (await res.json()) as T;
 }
@@ -145,6 +158,11 @@ export const api = {
     );
   },
 
+  async logout() {
+    if (USE_MOCK) return { ok: true };
+    return request<{ ok: boolean }>("/api/auth/logout", { method: "POST", body: "{}" });
+  },
+
   async listTasks() {
     return USE_MOCK ? mockTasks : request<TaskView[]>("/api/tasks");
   },
@@ -214,6 +232,14 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ label, secret }),
     });
+  },
+  async updateToken(id: string, input: { label?: string; secret?: string }) {
+    return USE_MOCK
+      ? { id, label: input.label ?? "mock", tokenTail: input.secret?.slice(-4) ?? "3a7f", status: "ACTIVE" }
+      : request<TokenView>(`/api/tokens/${id}`, {
+          method: "PATCH",
+          body: JSON.stringify(input),
+        });
   },
   async checkToken(id: string) {
     return USE_MOCK ? { ok: true, status: "ACTIVE" } : request<{ ok: boolean; status: string; message?: string }>(`/api/tokens/${id}/check`, { method: "POST", body: "{}" });

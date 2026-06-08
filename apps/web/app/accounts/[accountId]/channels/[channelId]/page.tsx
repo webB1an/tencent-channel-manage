@@ -9,7 +9,17 @@ import { Toast } from "@/components/ui/toast";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SectionHeader, SectionRow, EmptyState, StatTile } from "@/components/patterns";
-import { accountService, channelService, type Account, type Channel, type Section } from "@/lib/domain";
+import {
+  accountService,
+  channelService,
+  executionService,
+  taskService,
+  type Account,
+  type Channel,
+  type ExecutionRecord,
+  type ScheduledTask,
+  type Section,
+} from "@/lib/domain";
 import { formatShortDate } from "@/lib/utils";
 
 const sectionIcon: Record<string, "megaphone" | "share" | "message-circle" | "book" | "file-text" | "users"> = {
@@ -22,6 +32,8 @@ export default function ChannelDetailPage({ params }: { params: { accountId: str
   const [account, setAccount] = useState<Account | null>(null);
   const [channel, setChannel] = useState<Channel | null>(null);
   const [sections, setSections] = useState<Section[]>([]);
+  const [tasks, setTasks] = useState<ScheduledTask[]>([]);
+  const [records, setRecords] = useState<ExecutionRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -29,11 +41,15 @@ export default function ChannelDetailPage({ params }: { params: { accountId: str
       accountService.getAccountDetail(params.accountId).catch(() => null),
       channelService.getChannelDetail(params.accountId, params.channelId).catch(() => null),
       channelService.getSectionsByChannel(params.accountId, params.channelId).catch(() => [] as Section[]),
+      taskService.getScheduledTasks().catch(() => [] as ScheduledTask[]),
+      executionService.getExecutionRecords().catch(() => [] as ExecutionRecord[]),
     ])
-      .then(([a, c, s]) => {
+      .then(([a, c, s, t, r]) => {
         setAccount(a);
         setChannel(c);
         setSections(s);
+        setTasks(t);
+        setRecords(r);
       })
       .catch((e) => Toast.show({ content: (e as Error).message, type: "error" }))
       .finally(() => setLoading(false));
@@ -64,11 +80,15 @@ export default function ChannelDetailPage({ params }: { params: { accountId: str
     );
   }
 
-  const recentRecords: Array<{ id: string; section: string; status: "success" | "failed"; at: string; reqId: string }> = [
-    { id: "2901", section: "板块更新: 公告", status: "success", at: "2023-11-24 14:30:12", reqId: "2901" },
-    { id: "2884", section: "内容同步: 攻略分享", status: "success", at: "2023-11-24 12:05:44", reqId: "2884" },
-    { id: "2855", section: "全量备份", status: "failed", at: "2023-11-24 02:00:00", reqId: "2855" },
-  ];
+  const sectionIdSet = new Set(sections.map((s) => s.id));
+  const channelTasks = tasks.filter((t) => t.accountId === params.accountId && t.sectionIds.some((id) => sectionIdSet.has(id)));
+  const activeTasks = channelTasks.filter((t) => t.status === "enabled").length;
+  const channelRecords = records
+    .filter((r) => r.accountId === params.accountId && r.sectionIds.some((id) => sectionIdSet.has(id)))
+    .slice()
+    .sort((a, b) => new Date(b.startedAt ?? 0).getTime() - new Date(a.startedAt ?? 0).getTime());
+  const failedRecords = channelRecords.filter((r) => r.status === "failed").length;
+  const recentRecords = channelRecords.slice(0, 5);
 
   return (
     <>
@@ -151,8 +171,8 @@ export default function ChannelDetailPage({ params }: { params: { accountId: str
             </span>
           </div>
           <div className="grid grid-cols-2 gap-3 border-t border-border pt-3">
-            <StatTile label="Active Tasks" value={12} icon="zap" tone="primary" />
-            <StatTile label="Error Logs" value={1} icon="alert-triangle" tone="danger" />
+            <StatTile label="启用任务" value={activeTasks} icon="zap" tone="primary" />
+            <StatTile label="失败记录" value={failedRecords} icon="alert-triangle" tone={failedRecords > 0 ? "danger" : "success"} />
           </div>
           <Link
             href={`/tasks?channel=${channel.id}`}
@@ -167,36 +187,44 @@ export default function ChannelDetailPage({ params }: { params: { accountId: str
         {/* Recent records */}
         <section>
           <SectionHeader title="最近执行记录" icon="activity" />
-          <Card padding="none" className="divide-y divide-border overflow-hidden">
-            {recentRecords.map((r) => (
-              <div key={r.id} className="flex items-center justify-between gap-3 p-3.5">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[14px] font-medium text-ink">{r.section}</p>
-                  <p className="mt-0.5 font-mono text-[11px] text-ink-muted">
-                    {r.at} · ReqID: {r.reqId}
-                  </p>
-                </div>
-                <span
-                  className={
-                    r.status === "success"
-                      ? "rounded-sm border border-success/30 bg-success-soft px-2 py-0.5 text-[10px] font-bold tracking-wider text-success"
-                      : "rounded-sm border border-danger/30 bg-danger-soft px-2 py-0.5 text-[10px] font-bold tracking-wider text-danger"
-                  }
+          {recentRecords.length === 0 ? (
+            <EmptyState icon="activity" title="暂无执行记录" hint="执行任务后会在这里显示" />
+          ) : (
+            <>
+              <Card padding="none" className="divide-y divide-border overflow-hidden">
+                {recentRecords.map((r) => (
+                  <div key={r.id} className="flex items-center justify-between gap-3 p-3.5">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[14px] font-medium text-ink">{r.taskName || r.taskType}</p>
+                      <p className="mt-0.5 font-mono text-[11px] text-ink-muted">
+                        {formatShortDate(r.startedAt)} · ReqID: {r.id}
+                      </p>
+                    </div>
+                    <span
+                      className={
+                        r.status === "success"
+                          ? "rounded-sm border border-success/30 bg-success-soft px-2 py-0.5 text-[10px] font-bold tracking-wider text-success"
+                          : r.status === "failed"
+                            ? "rounded-sm border border-danger/30 bg-danger-soft px-2 py-0.5 text-[10px] font-bold tracking-wider text-danger"
+                            : "rounded-sm border border-warning/30 bg-warning-soft px-2 py-0.5 text-[10px] font-bold tracking-wider text-warning"
+                      }
+                    >
+                      {r.status === "success" ? "成功" : r.status === "failed" ? "失败" : r.status === "running" ? "运行中" : "等待中"}
+                    </span>
+                  </div>
+                ))}
+              </Card>
+              <div className="mt-3 text-center">
+                <Link
+                  href={`/tasks?channel=${channel.id}`}
+                  className="inline-flex items-center gap-1 text-[13px] font-medium text-primary hover:underline"
                 >
-                  {r.status === "success" ? "Success" : "Failed"}
-                </span>
+                  查看全部记录
+                  <Icon name="arrow-right" size={12} />
+                </Link>
               </div>
-            ))}
-          </Card>
-          <div className="mt-3 text-center">
-            <Link
-              href={`/tasks?channel=${channel.id}`}
-              className="inline-flex items-center gap-1 text-[13px] font-medium text-primary hover:underline"
-            >
-              查看全部记录
-              <Icon name="arrow-right" size={12} />
-            </Link>
-          </div>
+            </>
+          )}
         </section>
       </main>
     </>
