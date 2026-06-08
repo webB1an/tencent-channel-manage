@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useId, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { TopBar } from "@/components/layout/top-bar";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,9 @@ import {
   type Section,
   type TaskTemplate,
 } from "@/lib/domain";
+import { api } from "@/lib/api";
 import { formatShortDate, formatTime } from "@/lib/utils";
+import type { ModelView } from "@tcm/shared";
 
 const TASK_ICONS: Record<string, IconName> = {
   INSPECTION: "shield",
@@ -47,10 +50,12 @@ function NewTaskPageInner() {
   const [step, setStep] = useState(0);
   const [templates, setTemplates] = useState<TaskTemplate[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [models, setModels] = useState<ModelView[]>([]);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [sections, setSections] = useState<Section[]>([]);
   const [taskType, setTaskType] = useState<string>(() => search?.get("type") ?? "");
   const [accountId, setAccountId] = useState("");
+  const [modelId, setModelId] = useState("");
   const [channelId, setChannelId] = useState("");
   const [rangeType, setRangeType] = useState<RangeType>("all");
   const [sectionIds, setSectionIds] = useState<string[]>([]);
@@ -74,15 +79,22 @@ function NewTaskPageInner() {
 
   const template = useMemo(() => templates.find((t) => t.type === taskType), [templates, taskType]);
   const isChannelTask = template?.targetLevel === "channel";
+  const needsModel = taskType === "INSPECTION";
   const canSubmit = Boolean(
-    template && accountId && (!isChannelTask || channelId) && (rangeType !== "selectedSections" || sectionIds.length > 0)
+    template &&
+      accountId &&
+      (!needsModel || modelId) &&
+      (!isChannelTask || channelId) &&
+      (rangeType !== "selectedSections" || sectionIds.length > 0)
   );
 
   useEffect(() => {
-    Promise.all([taskService.getTaskTemplates(), accountService.getAccountList()])
-      .then(([tpl, acc]) => {
+    Promise.all([taskService.getTaskTemplates(), accountService.getAccountList(), api.listModels()])
+      .then(([tpl, acc, modelRows]) => {
         setTemplates(tpl);
         setAccounts(acc);
+        setModels(modelRows);
+        if (modelRows.length === 1) setModelId(modelRows[0].id);
       })
       .catch((e) => Toast.show({ content: (e as Error).message, type: "error" }));
   }, []);
@@ -124,6 +136,7 @@ function NewTaskPageInner() {
         taskType: template.type as "INSPECTION" | "HOT_SUMMARY",
         accountId,
         channelId,
+        modelId: needsModel ? modelId : null,
         taskConfig: { topN: Number(topN) || 10, rangeType, sectionIds, postTitle, postContent, allowDuplicates },
       };
       if (executionMode === "immediate") {
@@ -162,7 +175,7 @@ function NewTaskPageInner() {
   const prev = () => setStep((s) => Math.max(0, s - 1));
 
   const canProceed = () => {
-    if (step === 0) return Boolean(taskType && accountId);
+    if (step === 0) return Boolean(taskType && accountId && (!needsModel || modelId));
     if (step === 1) return (!isChannelTask || Boolean(channelId)) && (rangeType !== "selectedSections" || sectionIds.length > 0);
     if (step === 2) return true;
     if (step === 3) return true;
@@ -239,6 +252,31 @@ function NewTaskPageInner() {
                 title="选择执行账号"
                 placeholder="请选择执行账号"
               />
+              {needsModel && (
+                <div className="space-y-2">
+                  <h3 className="font-display text-[14px] font-semibold text-ink">选择巡查模型</h3>
+                  {models.length === 0 ? (
+                    <div className="rounded border border-warning/30 bg-warning-soft p-3">
+                      <p className="text-[12px] text-warning">频道巡查需要先配置一个模型。</p>
+                      <Link href="/models" className="mt-2 inline-flex items-center gap-1 text-[12px] font-medium text-primary">
+                        去配置模型
+                        <Icon name="arrow-right" size={12} />
+                      </Link>
+                    </div>
+                  ) : (
+                    <Select
+                      value={modelId}
+                      onChange={setModelId}
+                      options={models.map((m) => ({
+                        label: `${m.model} · ${providerLabel(m.provider)}${m.baseUrl ? ` · ${m.baseUrl}` : ""}`,
+                        value: m.id,
+                      }))}
+                      title="选择巡查模型"
+                      placeholder="请选择巡查模型"
+                    />
+                  )}
+                </div>
+              )}
             </Card>
           </div>
         )}
@@ -500,4 +538,10 @@ function nextDefaultTime() {
   d.setHours(23, 30, 0, 0);
   if (d.getTime() < Date.now()) d.setDate(d.getDate() + 1);
   return d;
+}
+
+function providerLabel(provider: string) {
+  if (provider === "anthropic") return "Anthropic 兼容";
+  if (provider === "openai") return "OpenAI 兼容";
+  return provider;
 }

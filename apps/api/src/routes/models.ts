@@ -73,20 +73,36 @@ export async function modelRoutes(app: FastifyInstance) {
     const id = (req.params as { id: string }).id;
     const row = await prisma.modelConfig.findFirst({ where: { id, userId: req.user!.sub } });
     if (!row) return reply.code(404).send({ error: "not_found" });
-    const baseUrl = (row.baseUrl ?? "https://api.openai.com").replace(/\/$/, "");
+    const baseUrl = (row.baseUrl ?? (row.provider === "anthropic" ? "https://api.anthropic.com" : "https://api.openai.com")).replace(/\/$/, "");
+    const apiKey = decrypt(row.encryptedApiKey);
     try {
-      const res = await fetch(`${baseUrl}/v1/chat/completions`, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          authorization: `Bearer ${decrypt(row.encryptedApiKey)}`,
-        },
-        body: JSON.stringify({
-          model: row.model,
-          messages: [{ role: "user", content: "ping" }],
-          max_tokens: 8,
-        }),
-      });
+      const res =
+        row.provider === "anthropic"
+          ? await fetch(`${baseUrl}/v1/messages`, {
+              method: "POST",
+              headers: {
+                "content-type": "application/json",
+                "x-api-key": apiKey,
+                "anthropic-version": "2023-06-01",
+              },
+              body: JSON.stringify({
+                model: row.model,
+                max_tokens: 8,
+                messages: [{ role: "user", content: "ping" }],
+              }),
+            })
+          : await fetch(`${baseUrl}/v1/chat/completions`, {
+              method: "POST",
+              headers: {
+                "content-type": "application/json",
+                authorization: `Bearer ${apiKey}`,
+              },
+              body: JSON.stringify({
+                model: row.model,
+                messages: [{ role: "user", content: "ping" }],
+                max_tokens: 8,
+              }),
+            });
       if (!res.ok) return reply.code(400).send({ error: "model_test_failed", status: res.status });
       const updated = await prisma.modelConfig.update({
         where: { id },

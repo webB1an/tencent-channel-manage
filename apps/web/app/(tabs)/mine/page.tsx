@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { TopBar } from "@/components/layout/top-bar";
 import { Card } from "@/components/ui/card";
@@ -101,6 +102,13 @@ export default function MinePage() {
               title="系统设置"
               onClick={() => Toast.show({ content: "系统设置" })}
             />
+            <Link href="/models" className="block">
+              <ListRow
+                prefix={<Icon name="zap" size={18} />}
+                title="模型配置"
+                suffix={<Icon name="chevron-right" size={16} className="text-ink-faint" />}
+              />
+            </Link>
             <ListRow
               prefix={<Icon name="trash" size={18} />}
               title="清理缓存"

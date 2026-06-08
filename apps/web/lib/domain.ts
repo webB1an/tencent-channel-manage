@@ -225,6 +225,12 @@ function channelsOf(guild: GuildView): ChannelView[] {
   return (guild as GuildWithChannels).channels ?? [];
 }
 
+function selectTargetSections(sections: Section[], taskConfig?: Record<string, unknown>) {
+  if (taskConfig?.rangeType !== "selectedSections") return sections;
+  const selectedIds = Array.isArray(taskConfig.sectionIds) ? taskConfig.sectionIds.map(String) : [];
+  return sections.filter((section) => selectedIds.includes(section.id));
+}
+
 export const accountService = {
   async getAccountList(): Promise<Account[]> {
     const [tokens, tasks] = await Promise.all([api.listTokens(), api.listTasks()]);
@@ -326,23 +332,31 @@ export const taskService = {
     taskType: "INSPECTION" | "HOT_SUMMARY";
     accountId: string;
     channelId: string;
+    modelId?: string | null;
     scheduleConfig: ScheduleConfig;
     taskConfig?: Record<string, unknown>;
   }) {
     const channel = await channelService.getChannelDetail(data.accountId, data.channelId);
     if (!channel) throw new Error("请选择执行频道");
     const sections = await channelService.getSectionsByChannel(data.accountId, data.channelId);
-    const selectedSectionId = Array.isArray(data.taskConfig?.sectionIds) ? data.taskConfig.sectionIds[0] : undefined;
-    const targetSection = sections.find((s) => s.id === selectedSectionId) ?? sections[0];
-    if (!targetSection) throw new Error("该频道没有可执行板块,请先刷新频道");
-    return api.createTask({
-      type: data.taskType,
-      tokenId: data.accountId,
-      guildId: channel.id,
-      channelId: targetSection.id,
-      scheduleMode: "DAILY",
-      defaultTime: data.scheduleConfig.time ?? "23:30",
-    });
+    const targetSections = selectTargetSections(sections, data.taskConfig);
+    if (!targetSections.length) throw new Error("该频道没有可执行板块,请先刷新频道");
+    if (data.taskType === "INSPECTION" && !data.modelId) throw new Error("请选择巡查模型");
+    const created = await Promise.all(
+      targetSections.map((section) =>
+        api.createTask({
+          type: data.taskType,
+          tokenId: data.accountId,
+          modelId: data.taskType === "INSPECTION" ? data.modelId ?? null : null,
+          guildId: channel.id,
+          channelId: section.id,
+          scheduleMode: "DAILY",
+          defaultTime: data.scheduleConfig.time ?? "23:30",
+          params: data.taskConfig ?? {},
+        }),
+      ),
+    );
+    return created[0];
   },
   async getScheduledTasks(): Promise<ScheduledTask[]> {
     const disabled = readJson<string[]>(DISABLED_TASK_KEY, []);
@@ -399,22 +413,30 @@ export const executionService = {
     taskType: "INSPECTION" | "HOT_SUMMARY";
     accountId: string;
     channelId: string;
+    modelId?: string | null;
     taskConfig?: Record<string, unknown>;
   }) {
     const channel = await channelService.getChannelDetail(data.accountId, data.channelId);
     if (!channel) throw new Error("请选择执行频道");
     const sections = await channelService.getSectionsByChannel(data.accountId, data.channelId);
-    const selectedSectionId = Array.isArray(data.taskConfig?.sectionIds) ? data.taskConfig.sectionIds[0] : undefined;
-    const targetSection = sections.find((s) => s.id === selectedSectionId) ?? sections[0];
-    if (!targetSection) throw new Error("该频道没有可执行板块,请先刷新频道");
-    return api.createTask({
-      type: data.taskType,
-      tokenId: data.accountId,
-      guildId: channel.id,
-      channelId: targetSection.id,
-      scheduleMode: "IMMEDIATE",
-      defaultTime: "23:30",
-    });
+    const targetSections = selectTargetSections(sections, data.taskConfig);
+    if (!targetSections.length) throw new Error("该频道没有可执行板块,请先刷新频道");
+    if (data.taskType === "INSPECTION" && !data.modelId) throw new Error("请选择巡查模型");
+    const created = await Promise.all(
+      targetSections.map((section) =>
+        api.createTask({
+          type: data.taskType,
+          tokenId: data.accountId,
+          modelId: data.taskType === "INSPECTION" ? data.modelId ?? null : null,
+          guildId: channel.id,
+          channelId: section.id,
+          scheduleMode: "IMMEDIATE",
+          defaultTime: "23:30",
+          params: data.taskConfig ?? {},
+        }),
+      ),
+    );
+    return created[0];
   },
   async getExecutionRecords(): Promise<ExecutionRecord[]> {
     const [tasks, accounts, channels] = await Promise.all([api.listTasks(), accountLookup(), channelLookup()]);

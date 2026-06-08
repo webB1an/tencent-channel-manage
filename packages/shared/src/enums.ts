@@ -27,6 +27,7 @@ export type TokenStatus = (typeof TokenStatus)[keyof typeof TokenStatus];
 
 export const ModelProvider = {
   OPENAI: "openai",
+  ANTHROPIC: "anthropic",
   DEEPSEEK: "deepseek",
   DOUBAO: "doubao",
   CUSTOM: "custom",

@@ -174,10 +174,11 @@ export const api = {
     channelId: string;
     scheduleMode: "IMMEDIATE" | "DAILY";
     defaultTime?: string;
+    params?: Record<string, unknown>;
   }) {
     return USE_MOCK ? ({ id: "task-new" } as { id: string; runId?: string }) : request<{ id: string; runId?: string }>("/api/tasks", {
       method: "POST",
-      body: JSON.stringify({ ...input, defaultTime: input.defaultTime ?? "23:30", params: {}, enabled: true }),
+      body: JSON.stringify({ ...input, defaultTime: input.defaultTime ?? "23:30", params: input.params ?? {}, enabled: true }),
     });
   },
   async updateTask(
