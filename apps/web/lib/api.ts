@@ -162,6 +162,36 @@ export const api = {
       body: JSON.stringify({ ...input, defaultTime: input.defaultTime ?? "23:30", params: {}, enabled: true }),
     });
   },
+  async updateTask(
+    id: string,
+    payload: {
+      enabled?: boolean;
+      status?: TaskView["status"];
+      defaultTime?: string;
+      channelId?: string | null;
+      scheduleMode?: TaskView["scheduleMode"];
+      params?: Record<string, unknown>;
+    },
+  ) {
+    if (USE_MOCK) {
+      const idx = mockTasks.findIndex((t) => t.id === id);
+      if (idx >= 0) {
+        const merged = { ...mockTasks[idx] };
+        if (payload.defaultTime !== undefined) merged.defaultTime = payload.defaultTime;
+        if (payload.channelId !== undefined) merged.channelId = payload.channelId;
+        if (payload.scheduleMode !== undefined) merged.scheduleMode = payload.scheduleMode;
+        if (payload.params !== undefined) merged.params = payload.params;
+        if (payload.enabled !== undefined) merged.enabled = payload.enabled;
+        if (payload.status !== undefined) merged.status = payload.status;
+        mockTasks[idx] = merged;
+      }
+      return { id, ...payload };
+    }
+    return request<{ id: string; enabled?: boolean; status?: TaskView["status"]; defaultTime?: string; channelId?: string | null; scheduleMode?: TaskView["scheduleMode"] }>(
+      `/api/tasks/${id}`,
+      { method: "PATCH", body: JSON.stringify(payload) },
+    );
+  },
   async listRuns(taskId: string) {
     return USE_MOCK ? mockRuns : request<TaskRunView[]>(`/api/tasks/${taskId}/runs`);
   },

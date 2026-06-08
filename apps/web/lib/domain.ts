@@ -338,18 +338,24 @@ export const taskService = {
       createdAt: task.createdAt,
     }));
   },
-  async getScheduledTaskDetail(id: string) {
-    return (await this.getScheduledTasks()).find((t) => t.id === id) ?? null;
-  },
   async getScheduledTask(id: string) {
-    return this.getScheduledTaskDetail(id);
+    return (await this.getScheduledTasks()).find((t) => t.id === id) ?? null;
   },
   async updateScheduledTask(
     id: string,
     payload: { accountId?: string; scheduleConfig?: ScheduleConfig; taskConfig?: Record<string, unknown> } = {}
   ) {
-    void payload;
-    return { id };
+    const body: {
+      defaultTime?: string;
+      scheduleMode?: "DAILY" | "IMMEDIATE";
+      params?: Record<string, unknown>;
+    } = {};
+    if (payload.scheduleConfig?.time) {
+      body.defaultTime = payload.scheduleConfig.time;
+      body.scheduleMode = payload.scheduleConfig.type === "daily" ? "DAILY" : "IMMEDIATE";
+    }
+    if (payload.taskConfig) body.params = payload.taskConfig;
+    return api.updateTask(id, body);
   },
   async enableScheduledTask(id: string) {
     writeJson(DISABLED_TASK_KEY, readJson<string[]>(DISABLED_TASK_KEY, []).filter((x) => x !== id));
@@ -411,10 +417,7 @@ export const executionService = {
       }),
     );
   },
-  async getExecutionRecordDetail(id: string) {
-    return (await this.getExecutionRecords()).find((r) => r.id === id) ?? null;
-  },
   async getExecutionRecord(id: string) {
-    return this.getExecutionRecordDetail(id);
+    return (await this.getExecutionRecords()).find((r) => r.id === id) ?? null;
   },
 };

@@ -197,7 +197,7 @@ export default function NewTaskPage() {
           </Card>
         )}
 
-        <div className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-[430px] border-t border-border bg-bg-card p-3" style={{ paddingBottom: "calc(12px + env(safe-area-inset-bottom, 0px))" }}>
+        <div className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-[430px] border-t border-border bg-bg-card p-3 pb-[calc(12px+env(safe-area-inset-bottom,0px))]">
           <div className="grid grid-cols-2 gap-2">
             <Button variant="secondary" disabled={step === 0} onClick={() => setStep((s) => Math.max(0, s - 1))}>返回修改</Button>
             {step < 3 ? (

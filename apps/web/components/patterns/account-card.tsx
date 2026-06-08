@@ -25,10 +25,10 @@ export function AccountCard({ account, onDelete }: { account: Account; onDelete?
           <InfoTile label="最近运行" value={account.lastRunAt ? formatShortDate(account.lastRunAt) : "暂无"} />
         </dl>
       </Link>
-      <div className="grid grid-cols-3 gap-2 border-t border-border pt-3">
+      <div className={`grid gap-2 border-t border-border pt-3 ${onDelete ? "grid-cols-3" : "grid-cols-2"}`}>
         <Link href={`/accounts/${account.id}`}><Button block size="sm" variant="secondary">详情</Button></Link>
         <Link href={`/accounts/${account.id}/edit`}><Button block size="sm" variant="secondary">编辑</Button></Link>
-        <Button size="sm" variant="ghost" onClick={onDelete} className="text-danger">删除</Button>
+        {onDelete && <Button size="sm" variant="ghost" onClick={onDelete} className="text-danger">删除</Button>}
       </div>
     </Card>
   );

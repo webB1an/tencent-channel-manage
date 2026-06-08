@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Toast } from "@/components/ui/toast";
 import { TopBar } from "@/components/layout/top-bar";
@@ -10,8 +9,7 @@ import { ListRow } from "@/components/ui/list-row";
 import { StatusBadge } from "@/components/patterns";
 import { accountService, channelService, type Account, type Channel, taskService, type ScheduledTask } from "@/lib/domain";
 
-export default function ScheduleDetailPage() {
-  const params = useParams<{ id: string }>();
+export default function ScheduleDetailPage({ params }: { params: { id: string } }) {
   const [task, setTask] = useState<ScheduledTask | null>(null);
   const [account, setAccount] = useState<Account | null>(null);
   const [channel, setChannel] = useState<Channel | null>(null);
@@ -22,11 +20,15 @@ export default function ScheduleDetailPage() {
       .then(async (t) => {
         setTask(t);
         if (!t) return;
-        const [a] = await Promise.all([accountService.getAccountDetail(t.accountId)]);
-        setAccount(a);
         if (t.channelId) {
-          const c = await channelService.getChannelDetail(t.accountId, t.channelId);
+          const [a, c] = await Promise.all([
+            accountService.getAccountDetail(t.accountId),
+            channelService.getChannelDetail(t.accountId, t.channelId),
+          ]);
+          setAccount(a);
           setChannel(c);
+        } else {
+          setAccount(await accountService.getAccountDetail(t.accountId));
         }
       })
       .catch((e) => Toast.show({ content: (e as Error).message, type: "error" }))

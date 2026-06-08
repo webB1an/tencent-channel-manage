@@ -27,7 +27,8 @@ export default function ChannelDetailPage({ params }: { params: { accountId: str
   if (loading) return <main className="page-shell"><Skeleton height={300} className="block" /></main>;
   if (!channel) return <TopBar title="频道详情" />;
 
-  const tokenTail = channel.id.slice(-4) || "----";
+  // show last 4 chars as a display tail; fall back to "----" if id is too short
+  const tokenTail = (channel.id ?? "").slice(-4).padStart(4, "-") || "----";
 
   return (
     <>

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Toast } from "@/components/ui/toast";
 import { TopBar } from "@/components/layout/top-bar";
-import { FieldLabel } from "@/components/patterns";
+import { FieldLabel, EmptyState } from "@/components/patterns";
 import { accountService } from "@/lib/domain";
 
 export default function EditAccountPage({ params }: { params: { accountId: string } }) {
@@ -18,8 +18,9 @@ export default function EditAccountPage({ params }: { params: { accountId: strin
   const [nickname, setNickname] = useState("");
   const [remark, setRemark] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
-  const canSave = useMemo(() => qq.trim() && token.trim(), [qq, token]);
+  const canSave = useMemo(() => Boolean(qq.trim()), [qq]);
 
   useEffect(() => {
     accountService.getAccountDetail(params.accountId)
@@ -28,16 +29,17 @@ export default function EditAccountPage({ params }: { params: { accountId: strin
         setQq(a.qq);
         setNickname(a.nickname || "");
         setRemark(a.remark || "");
+        setLoaded(true);
       })
       .catch((e) => Toast.show({ content: (e as Error).message, type: "error" }))
       .finally(() => setLoading(false));
   }, [params.accountId]);
 
   async function save() {
-    if (!canSave) { Toast.show({ content: "请填写 QQ号 和 Token", type: "error" }); return; }
+    if (!canSave) { Toast.show({ content: "请填写 QQ号", type: "error" }); return; }
     setBusy(true);
     try {
-      await accountService.updateAccount(params.accountId, { qq, token, nickname, remark });
+      await accountService.updateAccount(params.accountId, { qq, nickname, remark, ...(token.trim() ? { token: token.trim() } : {}) });
       Toast.show({ content: "账号已更新", type: "success" });
       router.replace(`/accounts/${params.accountId}`);
     } catch (e) {
@@ -53,6 +55,8 @@ export default function EditAccountPage({ params }: { params: { accountId: strin
       <main className="page-shell space-y-4">
         {loading ? (
           <Skeleton height={300} className="block" />
+        ) : !loaded ? (
+          <EmptyState title="账号不存在" hint="可能已被删除" />
         ) : (
           <>
             <section>
@@ -60,8 +64,8 @@ export default function EditAccountPage({ params }: { params: { accountId: strin
               <Input value={qq} onChange={(e) => setQq(e.target.value)} placeholder="请输入 QQ号" />
             </section>
             <section>
-              <FieldLabel required>Token</FieldLabel>
-              <Textarea value={token} onChange={(e) => setToken(e.target.value)} placeholder="请输入 Token" rows={4} />
+              <FieldLabel>Token</FieldLabel>
+              <Textarea value={token} onChange={(e) => setToken(e.target.value)} placeholder="留空则不修改,仅在需要更换时填写" rows={4} />
             </section>
             <section>
               <FieldLabel>昵称</FieldLabel>

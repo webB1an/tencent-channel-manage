@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Toast } from "@/components/ui/toast";
 import { TopBar } from "@/components/layout/top-bar";
@@ -10,8 +9,7 @@ import { ListRow } from "@/components/ui/list-row";
 import { StatusBadge } from "@/components/patterns";
 import { executionService, type ExecutionRecord } from "@/lib/domain";
 
-export default function ExecutionRecordPage() {
-  const params = useParams<{ id: string }>();
+export default function ExecutionRecordPage({ params }: { params: { id: string } }) {
   const [record, setRecord] = useState<ExecutionRecord | null>(null);
   const [loading, setLoading] = useState(true);
 

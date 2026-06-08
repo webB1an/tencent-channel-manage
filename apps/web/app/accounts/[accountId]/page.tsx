@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Toast } from "@/components/ui/toast";
@@ -11,6 +12,7 @@ import { StatusBadge, TokenText, ChannelCard, EmptyState } from "@/components/pa
 import { accountService, channelService, type Account, type Channel } from "@/lib/domain";
 
 export default function AccountDetailPage({ params }: { params: { accountId: string } }) {
+  const router = useRouter();
   const [account, setAccount] = useState<Account | null>(null);
   const [channels, setChannels] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,7 +55,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
     try {
       await accountService.deleteAccount(params.accountId);
       Toast.show({ content: "账号已删除", type: "success" });
-      window.location.href = "/";
+      router.replace("/");
     } catch (e) {
       Toast.show({ content: (e as Error).message, type: "error" });
     }

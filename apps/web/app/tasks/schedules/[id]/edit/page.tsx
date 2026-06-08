@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Toast } from "@/components/ui/toast";
@@ -9,18 +9,15 @@ import { TopBar } from "@/components/layout/top-bar";
 import { Card } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
-import { Radio } from "@/components/ui/radio";
 import { FieldLabel } from "@/components/patterns";
 import { accountService, taskService, type Account, type ScheduledTask } from "@/lib/domain";
 
-export default function EditScheduledTaskPage() {
-  const params = useParams<{ id: string }>();
+export default function EditScheduledTaskPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const [task, setTask] = useState<ScheduledTask | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [executionMode, setExecutionMode] = useState<"immediate" | "schedule">("schedule");
   const [scheduleType, setScheduleType] = useState<"daily" | "once">("daily");
   const [scheduleAt, setScheduleAt] = useState<Date>(new Date());
   const [accountId, setAccountId] = useState("");
@@ -34,7 +31,7 @@ export default function EditScheduledTaskPage() {
         setAccountId(t.accountId);
         if (t.scheduleConfig) {
           setScheduleType(t.scheduleConfig.type === "once" ? "once" : "daily");
-          setExecutionMode("schedule");
+          setScheduleAt(mergeDateAndTime(t.scheduleConfig.time));
         }
       })
       .catch((e) => Toast.show({ content: (e as Error).message, type: "error" }))
@@ -47,11 +44,11 @@ export default function EditScheduledTaskPage() {
     try {
       await taskService.updateScheduledTask(task.id, {
         accountId,
-        scheduleConfig: executionMode === "schedule" ? {
+        scheduleConfig: {
           type: scheduleType,
           time: scheduleAt.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false }),
           runAt: scheduleType === "once" ? scheduleAt.toISOString() : undefined,
-        } : undefined,
+        },
       });
       Toast.show({ content: "任务已更新", type: "success" });
       router.replace(`/tasks/schedules/${task.id}`);
@@ -76,9 +73,7 @@ export default function EditScheduledTaskPage() {
           </div>
           <div>
             <FieldLabel>执行方式</FieldLabel>
-            <div className="space-y-2">
-              <Radio checked={executionMode === "schedule"} onChange={() => setExecutionMode("schedule")}>定时执行</Radio>
-            </div>
+            <p className="text-md text-text-2">定时执行</p>
           </div>
           <div>
             <FieldLabel>定时规则</FieldLabel>
@@ -93,4 +88,15 @@ export default function EditScheduledTaskPage() {
       </main>
     </>
   );
+}
+
+function mergeDateAndTime(time: string | undefined): Date {
+  const now = new Date();
+  if (!time) return now;
+  const m = /^(\d{1,2}):(\d{2})$/.exec(time.trim());
+  if (!m) return now;
+  const h = Math.min(23, Math.max(0, Number(m[1])));
+  const min = Math.min(59, Math.max(0, Number(m[2])));
+  now.setHours(h, min, 0, 0);
+  return now;
 }
