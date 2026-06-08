@@ -1,8 +1,11 @@
-export function FieldLabel({ children, required, htmlFor }: { children: React.ReactNode; required?: boolean; htmlFor?: string }) {
+import { cn } from "@/lib/cn";
+
+export function FieldLabel({ children, required, htmlFor, optional, className }: { children: React.ReactNode; required?: boolean; htmlFor?: string; optional?: boolean; className?: string }) {
   return (
-    <label htmlFor={htmlFor} className="mb-1.5 block text-md font-semibold text-text">
-      {children}
-      {required && <span className="ml-0.5 text-danger">*</span>}
+    <label htmlFor={htmlFor} className={cn("mb-1.5 flex items-baseline gap-1 text-[13px] font-medium text-ink", className)}>
+      <span>{children}</span>
+      {required && <span className="text-danger">*</span>}
+      {optional && <span className="text-ink-faint">（选填）</span>}
     </label>
   );
 }

@@ -3,20 +3,22 @@
 import { forwardRef, type ButtonHTMLAttributes } from "react";
 import { cn } from "@/lib/cn";
 
-type Variant = "primary" | "secondary" | "ghost" | "danger";
-type Size = "sm" | "md" | "lg";
+type Variant = "primary" | "secondary" | "ghost" | "danger" | "outlined";
+type Size = "sm" | "md" | "lg" | "xl";
 
 const variantClass: Record<Variant, string> = {
-  primary: "bg-primary text-white hover:brightness-105 active:brightness-95",
-  secondary: "bg-bg-card text-text border border-border hover:bg-primary-soft",
-  ghost: "bg-transparent text-text hover:bg-primary-soft",
-  danger: "bg-danger text-white hover:brightness-105",
+  primary: "bg-primary text-white hover:bg-primary-hover active:bg-primary-active shadow-elev-1",
+  secondary: "bg-bg-card text-ink border border-border hover:border-primary hover:text-primary",
+  ghost: "bg-transparent text-ink-2 hover:bg-surface-container",
+  danger: "bg-danger text-white hover:brightness-110",
+  outlined: "bg-bg-card text-danger border border-danger/40 hover:bg-danger-soft",
 };
 
 const sizeClass: Record<Size, string> = {
-  sm: "h-8 px-3 text-sm",
-  md: "h-10 px-4 text-md",
-  lg: "h-12 px-5 text-lg",
+  sm: "h-8 px-3 text-[13px]",
+  md: "h-10 px-4 text-[14px]",
+  lg: "h-11 px-5 text-[15px]",
+  xl: "h-12 px-6 text-[15px]",
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -34,7 +36,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     <button
       ref={ref}
       className={cn(
-        "u-press inline-flex items-center justify-center gap-1.5 rounded-md font-medium select-none disabled:opacity-50 disabled:pointer-events-none",
+        "u-press inline-flex items-center justify-center gap-1.5 rounded font-medium select-none disabled:opacity-50 disabled:pointer-events-none",
+        "transition-colors duration-150",
         variantClass[variant],
         sizeClass[size],
         block && "w-full",

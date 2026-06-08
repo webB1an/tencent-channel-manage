@@ -2,14 +2,15 @@
 
 import { useEffect, useId, useState } from "react";
 import { useRouter } from "next/navigation";
+import { TopBar } from "@/components/layout/top-bar";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Toast } from "@/components/ui/toast";
-import { TopBar } from "@/components/layout/top-bar";
 import { Card } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
-import { FieldLabel } from "@/components/patterns";
+import { FieldLabel, StepIndicator } from "@/components/patterns";
 import { accountService, taskService, type Account, type ScheduledTask } from "@/lib/domain";
 import { formatTime } from "@/lib/utils";
 
@@ -63,33 +64,86 @@ export default function EditScheduledTaskPage({ params }: { params: { id: string
     }
   }
 
-  if (loading) return <main className="page-shell"><Skeleton height={300} className="block" /></main>;
-  if (!task) return <TopBar title="编辑任务" />;
+  if (loading) {
+    return (
+      <>
+        <TopBar title="编辑任务" />
+        <main className="page-shell space-y-4">
+          <Skeleton height={300} className="block rounded-lg" />
+        </main>
+      </>
+    );
+  }
+
+  if (!task) {
+    return (
+      <>
+        <TopBar title="编辑任务" />
+        <main className="page-shell">
+          <Card padding="md" className="text-center text-ink-muted">任务不存在或已删除</Card>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>
       <TopBar title="编辑任务" />
-      <main className="page-shell space-y-4">
-        <Card className="space-y-4">
+
+      <main className="page-shell space-y-5">
+        <section className="space-y-2">
+          <StepIndicator current={1} total={1} variant="bar" />
+          <p className="text-[12px] font-medium text-primary">编辑任务配置</p>
+        </section>
+
+        <Card padding="md" className="space-y-4">
           <div>
             <FieldLabel htmlFor={accountIdFieldId} required>执行账号</FieldLabel>
-            <Select id={accountIdFieldId} value={accountId} onChange={setAccountId} options={accounts.map((a) => ({ label: `${a.nickname || a.qq}`, value: a.id }))} title="选择执行账号" placeholder="请选择执行账号" />
+            <Select
+              id={accountIdFieldId}
+              value={accountId}
+              onChange={setAccountId}
+              options={accounts.map((a) => ({ label: a.nickname || a.qq, value: a.id }))}
+              title="选择执行账号"
+              placeholder="请选择执行账号"
+            />
           </div>
           <div>
             <FieldLabel>执行方式</FieldLabel>
-            <p className="text-md text-text-2">定时执行</p>
+            <p className="text-[14px] text-ink-variant">定时执行</p>
           </div>
           <div>
             <FieldLabel htmlFor={scheduleTypeFieldId}>定时规则</FieldLabel>
-            <Select id={scheduleTypeFieldId} value={scheduleType} onChange={(v) => setScheduleType(v as "daily" | "once")} options={[{ label: "每天", value: "daily" }, { label: "单次", value: "once" }]} />
+            <Select
+              id={scheduleTypeFieldId}
+              value={scheduleType}
+              onChange={(v) => setScheduleType(v as "daily" | "once")}
+              options={[
+                { label: "每天", value: "daily" },
+                { label: "单次", value: "once" },
+              ]}
+            />
           </div>
           <div>
-            <FieldLabel htmlFor={scheduleAtFieldId}>{scheduleType === "daily" ? "每日执行时间" : "执行日期和时间"}</FieldLabel>
-            <DatePicker id={scheduleAtFieldId} value={scheduleAt} onChange={setScheduleAt} mode={scheduleType === "daily" ? "time" : "datetime"} />
+            <FieldLabel htmlFor={scheduleAtFieldId}>
+              {scheduleType === "daily" ? "每日执行时间" : "执行日期和时间"}
+            </FieldLabel>
+            <DatePicker
+              id={scheduleAtFieldId}
+              value={scheduleAt}
+              onChange={setScheduleAt}
+              mode={scheduleType === "daily" ? "time" : "datetime"}
+            />
           </div>
         </Card>
-        <Button block size="lg" loading={busy} onClick={save}>保存</Button>
       </main>
+
+      <div className="fixed inset-x-0 bottom-0 z-30 mx-auto max-w-phone border-t border-border bg-bg-card/95 p-3 pb-[calc(12px+env(safe-area-inset-bottom,0px))] backdrop-blur">
+        <Button block size="lg" loading={busy} onClick={save} className="shadow-primary">
+          <Icon name="check" size={18} />
+          保存修改
+        </Button>
+      </div>
     </>
   );
 }

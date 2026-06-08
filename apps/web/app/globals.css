@@ -1,69 +1,115 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --primary-color: #2cb0a7;
-  --primary-soft: #d3f1ee;
-  --text-color: #1d2132;
-  --text-color-2: #5b6478;
-  --text-color-3: #9097a8;
-  --border-color: #e6e9f0;
-  --bg-page: #f2f4fb;
-  --bg-card: #ffffff;
-  --success: #2cb0a7;
-  --warning: #ffb547;
-  --danger: #e5484d;
-  --info: #2f99ff;
+  /* Material 3 inspired semantic tokens */
+  --color-primary: #0057c2;
+  --color-primary-hover: #004ba8;
+  --color-primary-container: #006ef2;
+  --color-primary-soft: #d9e2ff;
+
+  --color-surface: #faf9ff;
+  --color-surface-dim: #d8d9e5;
+  --color-surface-card: #ffffff;
+  --color-surface-container-low: #f2f3ff;
+  --color-surface-container: #ecedf9;
+  --color-surface-container-high: #e6e7f3;
+
+  --color-ink: #181b23;
+  --color-ink-variant: #414755;
+  --color-ink-muted: #727786;
+  --color-ink-faint: #9097a8;
+
+  --color-border: #d9d9d9;
+  --color-border-soft: #e6e9f0;
+  --color-border-strong: #c1c6d7;
+
+  --color-success: #2cb56a;
+  --color-success-soft: #e6f7eb;
+  --color-warning: #d97706;
+  --color-warning-soft: #fff4e5;
+  --color-danger: #ba1a1a;
+  --color-danger-soft: #ffdad6;
+  --color-info: #006ef2;
+  --color-info-soft: #d9e2ff;
+
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* Backwards-compat aliases (consumed by existing components) */
+  --primary-color: var(--color-primary);
+  --primary-soft: var(--color-primary-soft);
+  --text-color: var(--color-ink);
+  --text-color-2: var(--color-ink-variant);
+  --text-color-3: var(--color-ink-faint);
+  --border-color: var(--color-border-soft);
+  --bg-page: #f5f5f5;
+  --bg-card: var(--color-surface-card);
+  --success: var(--color-success);
+  --warning: var(--color-warning);
+  --danger: var(--color-danger);
+  --info: var(--color-info);
+
   color-scheme: light;
 }
 
 html, body {
   height: 100%;
-  background: #f2f4fb;
-  color: var(--text-color);
+  background: #f5f5f5;
+  color: var(--color-ink);
   -webkit-tap-highlight-color: transparent;
-  font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-}
-
-body {
+  font-family: 'Inter', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif;
   font-size: 14px;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  font-feature-settings: "cv11", "ss01", "ss03";
+  font-variant-numeric: tabular-nums;
 }
 
 * { box-sizing: border-box; }
 
 button { -webkit-appearance: none; appearance: none; }
-input, textarea, select, button { font: inherit; }
+input, textarea, select, button { font: inherit; color: inherit; }
 
+::-webkit-scrollbar { width: 0; height: 0; }
+
+/* App shell — single column, mobile-first */
 .app-shell {
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top, rgb(74 222 128 / 0.16), transparent 28%),
-    linear-gradient(180deg, #f8fafc 0%, #eef5ff 100%);
-  background-color: var(--bg-page);
+  background: #f5f5f5;
 }
 
 .page-shell {
-  padding: 14px 14px calc(78px + var(--safe-bottom));
+  padding: 16px 16px calc(96px + var(--safe-bottom));
 }
 
 .surface {
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-border);
 }
 
-.u-press {
-  transition: transform 80ms cubic-bezier(0.22, 1, 0.36, 1), opacity 80ms cubic-bezier(0.22, 1, 0.36, 1);
+/* Headings use Plus Jakarta Sans for character */
+h1, h2, h3, h4, h5, h6, .font-display {
+  font-family: 'Plus Jakarta Sans', 'Inter', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif;
+  letter-spacing: -0.01em;
 }
-.u-press:active { transform: scale(0.97); opacity: 0.85; }
+
+/* Utility helpers */
+.u-press {
+  transition: transform 120ms cubic-bezier(0.22, 1, 0.36, 1), opacity 120ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.u-press:active { transform: scale(0.98); opacity: 0.85; }
 
 .u-row-press:active { transform: scale(0.99); }
 
 .tabular { font-variant-numeric: tabular-nums; }
+
+.text-balance { text-wrap: balance; }
+.text-pretty { text-wrap: pretty; }
 
 .line-clamp-2 {
   display: -webkit-box;
@@ -78,6 +124,14 @@ input, textarea, select, button { font: inherit; }
   overflow: hidden;
 }
 
+/* Focus ring — accessibility */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Animations */
 @keyframes sheetUp   { from { transform: translateY(100%); } to { transform: translateY(0); } }
 @keyframes fadeIn    { from { opacity: 0; } to { opacity: 1; } }
 @keyframes popIn     { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
