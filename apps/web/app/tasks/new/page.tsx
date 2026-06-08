@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useId, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { TopBar } from "@/components/layout/top-bar";
 import { Button } from "@/components/ui/button";
 import { Icon, type IconName } from "@/components/ui/icon";
@@ -30,7 +30,6 @@ import { formatShortDate, formatTime } from "@/lib/utils";
 const TASK_ICONS: Record<string, IconName> = {
   INSPECTION: "shield",
   HOT_SUMMARY: "trending-up",
-  SYNC_CHANNELS: "refresh-cw",
 };
 
 export default function NewTaskPage() {
@@ -44,6 +43,7 @@ export default function NewTaskPage() {
 function NewTaskPageInner() {
   const router = useRouter();
   const search = useSearchParams();
+  const pathname = usePathname();
   const [step, setStep] = useState(0);
   const [templates, setTemplates] = useState<TaskTemplate[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -120,12 +120,6 @@ function NewTaskPageInner() {
     }
     setBusy(true);
     try {
-      if (template.type === "SYNC_CHANNELS") {
-        await channelService.refreshChannels(accountId);
-        Toast.show({ content: "频道同步任务已执行", type: "success" });
-        router.replace("/tasks");
-        return;
-      }
       const data = {
         taskType: template.type as "INSPECTION" | "HOT_SUMMARY",
         accountId,
@@ -154,24 +148,22 @@ function NewTaskPageInner() {
     }
   }
 
-  // Map stage 0..3 to step 1..7 for the indicator
-  const stepNumber = step + 1;
-  const totalSteps = 7;
-  const ranges: Array<{ from: number; to: number; label: string }> = [
-    { from: 1, to: 1, label: "任务类型与账户选择" },
-    { from: 2, to: 3, label: "频道与发布范围" },
-    { from: 4, to: 4, label: "任务参数" },
-    { from: 5, to: 6, label: "执行与调度" },
-    { from: 7, to: 7, label: "确认提交" },
+  const totalSteps = 5;
+  const stepLabels = [
+    "任务类型与账号选择",
+    "频道与发布范围",
+    "任务参数",
+    "执行与调度",
+    "确认提交",
   ];
-  const currentRange = ranges[step];
+  const currentLabel = stepLabels[step];
 
-  const next = () => setStep((s) => Math.min(ranges.length - 1, s + 1));
+  const next = () => setStep((s) => Math.min(stepLabels.length - 1, s + 1));
   const prev = () => setStep((s) => Math.max(0, s - 1));
 
   const canProceed = () => {
-    if (step === 0) return Boolean(taskType && accountId && (!isChannelTask || channelId));
-    if (step === 1) return rangeType !== "selectedSections" || sectionIds.length > 0;
+    if (step === 0) return Boolean(taskType && accountId);
+    if (step === 1) return (!isChannelTask || Boolean(channelId)) && (rangeType !== "selectedSections" || sectionIds.length > 0);
     if (step === 2) return true;
     if (step === 3) return true;
     return canSubmit;
@@ -188,12 +180,10 @@ function NewTaskPageInner() {
         {/* Step header */}
         <section className="space-y-2">
           <div className="flex items-center justify-between text-[12px]">
-            <span className="font-semibold text-primary">
-              {step === 0 ? `第 ${stepNumber}/7 步` : `Step ${currentRange.from}-${currentRange.to}: ${currentRange.label}`}
-            </span>
-            <span className="text-ink-muted">{currentRange.label}</span>
+            <span className="font-semibold text-primary">第 {step + 1}/{totalSteps} 步</span>
+            <span className="text-ink-muted">{currentLabel}</span>
           </div>
-          <StepIndicator current={currentRange.from} total={totalSteps} variant="bar" />
+          <StepIndicator current={step + 1} total={totalSteps} variant="bar" />
         </section>
 
         {/* Stage 0: type + account */}
@@ -207,7 +197,13 @@ function NewTaskPageInner() {
                   return (
                     <button
                       key={tpl.type}
-                      onClick={() => setTaskType(tpl.type)}
+                      onClick={() => {
+                        if (tpl.type === taskType) return;
+                        setTaskType(tpl.type);
+                        const params = new URLSearchParams(search?.toString() ?? "");
+                        params.set("type", tpl.type);
+                        router.replace(`${pathname}?${params.toString()}`);
+                      }}
                       className={
                         "rounded-lg border bg-bg-card p-4 text-center transition-all u-press " +
                         (selected
@@ -331,21 +327,21 @@ function NewTaskPageInner() {
             <h3 className="font-display text-[14px] font-semibold text-ink">任务参数</h3>
             <Input
               id={postTitleFieldId}
-              label="Post Title"
+              label="帖子标题"
               optional
               value={postTitle}
               onChange={(e) => setPostTitle(e.target.value)}
-              placeholder="e.g. Weekly Community Update"
+              placeholder="例如:本周社区更新"
             />
             <div>
               <label htmlFor={postContentFieldId} className="mb-1.5 block text-[13px] font-medium text-ink">
-                Post Content
+                帖子内容
               </label>
               <textarea
                 id={postContentFieldId}
                 value={postContent}
                 onChange={(e) => setPostContent(e.target.value)}
-                placeholder="Enter your task details or content here..."
+                placeholder="请输入任务详情或内容..."
                 rows={4}
                 className="block w-full rounded border border-border bg-bg-card p-3 text-[14px] text-ink placeholder:text-ink-faint focus:border-primary focus:outline-none"
               />
@@ -362,8 +358,8 @@ function NewTaskPageInner() {
             )}
             <div className="flex items-center justify-between rounded border border-border bg-surface-container-low p-3">
               <div>
-                <p className="text-[13px] font-medium text-ink">Allow Duplicates</p>
-                <p className="text-[11px] text-ink-muted">Enable to permit multiple identical tasks</p>
+                <p className="text-[13px] font-medium text-ink">允许重复</p>
+                <p className="text-[11px] text-ink-muted">开启后允许提交重复的相同任务</p>
               </div>
               <Switch checked={allowDuplicates} onChange={setAllowDuplicates} ariaLabel="允许重复" />
             </div>
@@ -445,28 +441,28 @@ function NewTaskPageInner() {
         {step === 4 && (
           <div className="space-y-4">
             <header>
-              <h2 className="font-display text-[18px] font-semibold text-ink">Task Parameters</h2>
-              <p className="mt-1 text-[13px] text-ink-muted">Configure the final details and review your task.</p>
+              <h2 className="font-display text-[18px] font-semibold text-ink">任务参数</h2>
+              <p className="mt-1 text-[13px] text-ink-muted">完善最终配置并确认任务。</p>
             </header>
             <ReviewSummary
               serverNode="SG-01"
               groups={[
                 {
-                  title: "Review Confirmation",
+                  title: "确认信息",
                   items: [
-                    { label: "Account", value: accounts.find((a) => a.id === accountId)?.nickname || accountId || "—" },
-                    { label: "Channel", value: channels.find((c) => c.id === channelId)?.name || "—" },
-                    { label: "Scope", value: rangeType === "all" ? "Full Channel" : `${sectionIds.length} sections` },
-                    { label: "Schedule", value: executionMode === "immediate" ? "Immediate" : scheduleType === "daily" ? `Daily @ ${formatTime(scheduleAt)}` : formatShortDate(scheduleAt) },
+                    { label: "账号", value: accounts.find((a) => a.id === accountId)?.nickname || accountId || "—" },
+                    { label: "频道", value: channels.find((c) => c.id === channelId)?.name || "—" },
+                    { label: "执行范围", value: rangeType === "all" ? "全频道" : `${sectionIds.length} 个分区` },
+                    { label: "调度", value: executionMode === "immediate" ? "立即执行" : scheduleType === "daily" ? `每天 ${formatTime(scheduleAt)}` : formatShortDate(scheduleAt) },
                   ],
                 },
                 {
-                  title: "Post Configuration",
+                  title: "帖子配置",
                   items: [
-                    { label: "Post Title", value: postTitle || "—" },
-                    { label: "Top N", value: topN },
-                    { label: "Duplicates", value: allowDuplicates ? "Allowed" : "Not allowed" },
-                    { label: "Task Type", value: template?.name ?? "—" },
+                    { label: "帖子标题", value: postTitle || "—" },
+                    { label: "数量", value: topN },
+                    { label: "是否允许重复", value: allowDuplicates ? "允许" : "不允许" },
+                    { label: "任务类型", value: template?.name ?? "—" },
                   ],
                 },
               ]}

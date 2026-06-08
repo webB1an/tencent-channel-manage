@@ -11,7 +11,6 @@ import type { ScheduledTask } from "@/lib/domain";
 const typeToIcon: Record<string, IconName> = {
   INSPECTION: "shield",
   HOT_SUMMARY: "trending-up",
-  SYNC_CHANNELS: "refresh-cw",
 };
 
 export function ScheduledTaskCard({ task, onToggle }: { task: ScheduledTask; onToggle?: () => void }) {

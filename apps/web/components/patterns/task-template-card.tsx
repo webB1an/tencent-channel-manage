@@ -13,7 +13,6 @@ const levelToTone: Record<string, string> = {
 const typeToIcon: Record<string, IconName> = {
   INSPECTION: "shield",
   HOT_SUMMARY: "trending-up",
-  SYNC_CHANNELS: "refresh-cw",
 };
 
 export function TaskTemplateCard({ template, selected, onClick }: { template: TaskTemplate; selected?: boolean; onClick?: () => void }) {

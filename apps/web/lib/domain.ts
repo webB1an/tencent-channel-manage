@@ -54,7 +54,7 @@ export interface TaskConfigField {
 }
 
 export interface TaskTemplate {
-  type: "INSPECTION" | "HOT_SUMMARY" | "SYNC_CHANNELS";
+  type: "INSPECTION" | "HOT_SUMMARY";
   name: string;
   description?: string;
   targetLevel: TargetLevel;
@@ -116,14 +116,6 @@ const PROFILE_KEY = "tcm_account_profiles";
 const DISABLED_TASK_KEY = "tcm_disabled_task_ids";
 
 export const taskTemplates: TaskTemplate[] = [
-  {
-    type: "SYNC_CHANNELS",
-    name: "同步频道列表",
-    description: "刷新账号加入的频道和频道基础信息。",
-    targetLevel: "account",
-    supportImmediate: true,
-    supportSchedule: false,
-  },
   {
     type: "INSPECTION",
     name: "频道巡查",

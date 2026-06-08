@@ -10,7 +10,6 @@ import type { ExecutionRecord } from "@/lib/domain";
 const typeToIcon: Record<string, IconName> = {
   INSPECTION: "shield",
   HOT_SUMMARY: "trending-up",
-  SYNC_CHANNELS: "refresh-cw",
 };
 
 export function ExecutionRecordCard({ record }: { record: ExecutionRecord }) {
