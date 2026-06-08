@@ -81,10 +81,13 @@ export default function ChannelDetailPage({ params }: { params: { accountId: str
   }
 
   const sectionIdSet = new Set(sections.map((s) => s.id));
-  const channelTasks = tasks.filter((t) => t.accountId === params.accountId && t.sectionIds.some((id) => sectionIdSet.has(id)));
+  const belongsToCurrentChannel = (item: { accountId: string; guildId?: string; sectionIds: string[] }) =>
+    item.accountId === params.accountId &&
+    (item.guildId === channel.id || item.sectionIds.some((id) => sectionIdSet.has(id)));
+  const channelTasks = tasks.filter(belongsToCurrentChannel);
   const activeTasks = channelTasks.filter((t) => t.status === "enabled").length;
   const channelRecords = records
-    .filter((r) => r.accountId === params.accountId && r.sectionIds.some((id) => sectionIdSet.has(id)))
+    .filter(belongsToCurrentChannel)
     .slice()
     .sort((a, b) => new Date(b.startedAt ?? 0).getTime() - new Date(a.startedAt ?? 0).getTime());
   const failedRecords = channelRecords.filter((r) => r.status === "failed").length;

@@ -15,24 +15,38 @@ export async function handleTaskRun(data: TaskRunJobData) {
   try {
     const task = await prisma.task.findFirst({
       where: { id: data.taskId, userId: data.userId },
-      include: { token: true, model: true, guild: true, channel: true },
+      include: { token: true, model: true, guild: { include: { channels: true } }, channel: true },
     });
     if (!task || task.token.status !== "ACTIVE") throw new Error("task_or_token_unavailable");
-    if (!task.guild || !task.channel) throw new Error("guild_or_channel_missing");
+    if (!task.guild) throw new Error("guild_missing");
     if (task.type === "INSPECTION" && !task.model) throw new Error("model_required");
 
     const token = decrypt(task.token.encryptedToken);
     const { date, start, end } = shanghaiDay();
-    const scanLimit = taskParamNumber(JSON.parse(task.paramsJson), "topN", DEFAULT_SCAN_LIMIT, 1, DEFAULT_SCAN_LIMIT);
-    const allowDuplicates = Boolean(JSON.parse(task.paramsJson).allowDuplicates);
-    const feeds = (await fetchTodayFeeds(token, task.guild.guildId, task.channel.channelId, start, end, scanLimit)).filter((feed) => feedId(feed));
+    const params = JSON.parse(task.paramsJson) as Record<string, unknown>;
+    const scanLimit = taskParamNumber(params, "topN", DEFAULT_SCAN_LIMIT, 1, DEFAULT_SCAN_LIMIT);
+    const allowDuplicates = Boolean(params.allowDuplicates);
+    const targetChannels = selectTargetChannels(task.guild.channels, task.channel, params);
+    if (!targetChannels.length) throw new Error("target_channel_missing");
+    const perChannelLimit = Math.max(1, Math.ceil(scanLimit / targetChannels.length));
+    const feedRows = (
+      await Promise.all(
+        targetChannels.map(async (channel) =>
+          (await fetchTodayFeeds(token, task.guild!.guildId, channel.channelId, start, end, perChannelLimit))
+            .filter((feed) => feedId(feed))
+            .map((feed) => ({ feed, channel })),
+        ),
+      )
+    ).flat().slice(0, scanLimit);
 
     if (task.type === "HOT_SUMMARY") {
-      const items = feeds
-        .sort((a, b) => feedLikeCount(b) - feedLikeCount(a))
+      const items = feedRows
+        .sort((a, b) => feedLikeCount(b.feed) - feedLikeCount(a.feed))
         .slice(0, 10)
-        .map((feed, index) => ({
+        .map(({ feed, channel }, index) => ({
           rank: index + 1,
+          channelId: channel.id,
+          channelName: channel.name,
           postId: feedId(feed),
           title: feedTitle(feed),
           content: feedContent(feed).slice(0, 180),
@@ -49,24 +63,25 @@ export async function handleTaskRun(data: TaskRunJobData) {
       });
     } else {
       const existing = await prisma.inspectionResult.findMany({
-        where: { taskId: task.id, postId: { in: feeds.map(feedId) } },
+        where: { taskId: task.id, postId: { in: feedRows.map(({ feed }) => feedId(feed)) } },
         select: { postId: true },
       });
       const seen = new Set(existing.map((r) => r.postId));
-      const candidates = allowDuplicates ? feeds : feeds.filter((feed) => !seen.has(feedId(feed)));
+      const candidates = allowDuplicates ? feedRows : feedRows.filter(({ feed }) => !seen.has(feedId(feed)));
       const model = task.model!;
       const modelResult = await inspectWithModel({
         provider: model.provider,
         apiKey: decrypt(model.encryptedApiKey),
         baseUrl: model.baseUrl ?? (model.provider === "anthropic" ? "https://api.anthropic.com" : "https://api.openai.com"),
         model: model.model,
-        feeds: candidates,
+        feeds: candidates.map(({ feed }) => feed),
       });
 
       for (const item of modelResult) {
         if (!item.flagged) continue;
-        const feed = candidates.find((f) => feedId(f) === item.postId);
-        if (!feed) continue;
+        const candidate = candidates.find(({ feed }) => feedId(feed) === item.postId);
+        if (!candidate) continue;
+        const { feed, channel } = candidate;
         await prisma.inspectionResult.upsert({
           where: { taskId_postId: { taskId: task.id, postId: item.postId } },
           update: {},
@@ -75,7 +90,7 @@ export async function handleTaskRun(data: TaskRunJobData) {
             taskId: task.id,
             userId: data.userId,
             guildId: task.guild.id,
-            channelId: task.channel.id,
+            channelId: channel.id,
             postId: item.postId,
             title: feedTitle(feed),
             content: feedContent(feed).slice(0, 4000),
@@ -100,7 +115,7 @@ export async function handleTaskRun(data: TaskRunJobData) {
         status: "SUCCESS",
         finishedAt: new Date(),
         exitCode: 0,
-        logsJson: JSON.stringify([{ stream: "worker", text: `processed ${feeds.length} feeds` }]),
+        logsJson: JSON.stringify([{ stream: "worker", text: `processed ${feedRows.length} feeds from ${targetChannels.length} channels` }]),
       },
     });
   } catch (error) {
@@ -136,6 +151,17 @@ async function fetchTodayFeeds(token: string, guildId: string, channelId: string
     if (!attach) break;
   }
   return feeds.slice(0, scanLimit);
+}
+
+function selectTargetChannels<T extends { id: string; channelId: string }>(
+  guildChannels: T[],
+  pinnedChannel: T | null,
+  params: Record<string, unknown>,
+): T[] {
+  if (pinnedChannel) return [pinnedChannel];
+  if (params.rangeType !== "selectedSections") return guildChannels;
+  const selectedIds = Array.isArray(params.sectionIds) ? params.sectionIds.map(String) : [];
+  return guildChannels.filter((channel) => selectedIds.includes(channel.id));
 }
 
 function extractFeeds(data: { feeds?: TencentFeed[]; data?: TencentFeed[] }) {

@@ -171,7 +171,7 @@ export const api = {
     tokenId: string;
     modelId?: string | null;
     guildId: string;
-    channelId: string;
+    channelId?: string | null;
     scheduleMode: "IMMEDIATE" | "DAILY";
     defaultTime?: string;
     params?: Record<string, unknown>;

@@ -36,12 +36,10 @@ export const config = {
   adminUsername: process.env.ADMIN_USERNAME ?? "admin",
   adminPassword: process.env.ADMIN_PASSWORD ?? "change-me-now",
   nodeEnv: process.env.NODE_ENV ?? "development",
-  cliPath: process.env.TENCENT_CHANNEL_CLI ?? (process.platform === "win32" ? "cmd.exe" : "npx"),
+  cliPath: process.env.TENCENT_CHANNEL_CLI ?? "npx",
   cliPrefixArgs: process.env.TENCENT_CHANNEL_CLI
     ? []
-    : process.platform === "win32"
-      ? ["/d", "/s", "/c", "npx", "-y", "tencent-channel-cli"]
-      : ["-y", "tencent-channel-cli"],
+    : ["-y", "tencent-channel-cli"],
   runRoot: process.env.TENCENT_CHANNEL_RUN_ROOT ?? "./.runs",
   runTimeoutMs: Number(process.env.TENCENT_CHANNEL_RUN_TIMEOUT_MS ?? 5 * 60_000),
 };

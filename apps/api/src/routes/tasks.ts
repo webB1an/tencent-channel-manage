@@ -54,8 +54,8 @@ export async function taskRoutes(app: FastifyInstance) {
     if (type === "INSPECTION" && !modelId) {
       return reply.code(400).send({ error: "model_required" });
     }
-    if (!guildId || !channelId) {
-      return reply.code(400).send({ error: "guild_and_channel_required" });
+    if (!guildId) {
+      return reply.code(400).send({ error: "guild_required" });
     }
     if (modelId) {
       const m = await prisma.modelConfig.findFirst({ where: { id: modelId, userId: req.user!.sub } });
@@ -63,8 +63,10 @@ export async function taskRoutes(app: FastifyInstance) {
     }
     const guild = await prisma.guild.findFirst({ where: { id: guildId, userId: req.user!.sub, tokenId } });
     if (!guild) return reply.code(400).send({ error: "invalid_guild" });
-    const channel = await prisma.channel.findFirst({ where: { id: channelId, guildId: guild.id } });
-    if (!channel) return reply.code(400).send({ error: "invalid_channel" });
+    if (channelId) {
+      const channel = await prisma.channel.findFirst({ where: { id: channelId, guildId: guild.id } });
+      if (!channel) return reply.code(400).send({ error: "invalid_channel" });
+    }
 
     const task = await prisma.task.create({
       data: {
@@ -77,8 +79,8 @@ export async function taskRoutes(app: FastifyInstance) {
         scheduleMode,
         defaultTime,
         paramsJson: JSON.stringify(params),
-        enabled,
-        status: "ACTIVE",
+        enabled: scheduleMode === "IMMEDIATE" ? false : enabled,
+        status: scheduleMode === "IMMEDIATE" ? "DISABLED" : "ACTIVE",
       },
     });
 

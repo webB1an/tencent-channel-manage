@@ -75,6 +75,7 @@ export interface ScheduledTask {
   id: string;
   name?: string;
   accountId: string;
+  guildId?: string;
   channelId?: string;
   taskType: string;
   targetLevel: TargetLevel;
@@ -92,6 +93,7 @@ export interface ExecutionRecord {
   id: string;
   scheduledTaskId?: string;
   accountId: string;
+  guildId?: string;
   channelId?: string;
   taskType: string;
   taskName?: string;
@@ -231,6 +233,11 @@ function selectTargetSections(sections: Section[], taskConfig?: Record<string, u
   return sections.filter((section) => selectedIds.includes(section.id));
 }
 
+function taskSectionIds(task: TaskView) {
+  const ids = Array.isArray(task.params.sectionIds) ? task.params.sectionIds.map(String) : [];
+  return ids.length > 0 ? ids : task.channelId ? [task.channelId] : [];
+}
+
 export const accountService = {
   async getAccountList(): Promise<Account[]> {
     const [tokens, tasks] = await Promise.all([api.listTokens(), api.listTasks()]);
@@ -338,43 +345,38 @@ export const taskService = {
   }) {
     const channel = await channelService.getChannelDetail(data.accountId, data.channelId);
     if (!channel) throw new Error("请选择执行频道");
-    const sections = await channelService.getSectionsByChannel(data.accountId, data.channelId);
-    const targetSections = selectTargetSections(sections, data.taskConfig);
-    if (!targetSections.length) throw new Error("该频道没有可执行板块,请先刷新频道");
     if (data.taskType === "INSPECTION" && !data.modelId) throw new Error("请选择巡查模型");
-    const created = await Promise.all(
-      targetSections.map((section) =>
-        api.createTask({
-          type: data.taskType,
-          tokenId: data.accountId,
-          modelId: data.taskType === "INSPECTION" ? data.modelId ?? null : null,
-          guildId: channel.id,
-          channelId: section.id,
-          scheduleMode: "DAILY",
-          defaultTime: data.scheduleConfig.time ?? "23:30",
-          params: data.taskConfig ?? {},
-        }),
-      ),
-    );
-    return created[0];
+    return api.createTask({
+      type: data.taskType,
+      tokenId: data.accountId,
+      modelId: data.taskType === "INSPECTION" ? data.modelId ?? null : null,
+      guildId: channel.id,
+      channelId: null,
+      scheduleMode: "DAILY",
+      defaultTime: data.scheduleConfig.time ?? "23:30",
+      params: data.taskConfig ?? {},
+    });
   },
   async getScheduledTasks(): Promise<ScheduledTask[]> {
     const disabled = readJson<string[]>(DISABLED_TASK_KEY, []);
-    return (await api.listTasks()).map((task) => ({
-      id: task.id,
-      name: taskName(task.type),
-      accountId: task.tokenId,
-      channelId: task.channelId ?? undefined,
-      taskType: task.type,
-      targetLevel: taskTargetLevel(task.type),
-      rangeType: "all",
-      sectionIds: task.channelId ? [task.channelId] : [],
-      taskConfig: task.params,
-      scheduleConfig: { type: task.scheduleMode === "DAILY" ? "daily" : "once", time: task.defaultTime },
-      status: disabled.includes(task.id) || !task.enabled || task.status === "PAUSED" ? "disabled" : "enabled",
-      nextRunAt: task.scheduleMode === "DAILY" ? `每天 ${task.defaultTime}` : undefined,
-      createdAt: task.createdAt,
-    }));
+    return (await api.listTasks())
+      .filter((task) => task.scheduleMode === "DAILY")
+      .map((task) => ({
+        id: task.id,
+        name: taskName(task.type),
+        accountId: task.tokenId,
+        guildId: task.guildId ?? undefined,
+        channelId: task.channelId ?? undefined,
+        taskType: task.type,
+        targetLevel: taskTargetLevel(task.type),
+        rangeType: "all",
+        sectionIds: taskSectionIds(task),
+        taskConfig: task.params,
+        scheduleConfig: { type: "daily", time: task.defaultTime },
+        status: disabled.includes(task.id) || !task.enabled || task.status === "PAUSED" ? "disabled" : "enabled",
+        nextRunAt: `每天 ${task.defaultTime}`,
+        createdAt: task.createdAt,
+      }));
   },
   async getScheduledTask(id: string) {
     return (await this.getScheduledTasks()).find((t) => t.id === id) ?? null;
@@ -418,25 +420,17 @@ export const executionService = {
   }) {
     const channel = await channelService.getChannelDetail(data.accountId, data.channelId);
     if (!channel) throw new Error("请选择执行频道");
-    const sections = await channelService.getSectionsByChannel(data.accountId, data.channelId);
-    const targetSections = selectTargetSections(sections, data.taskConfig);
-    if (!targetSections.length) throw new Error("该频道没有可执行板块,请先刷新频道");
     if (data.taskType === "INSPECTION" && !data.modelId) throw new Error("请选择巡查模型");
-    const created = await Promise.all(
-      targetSections.map((section) =>
-        api.createTask({
-          type: data.taskType,
-          tokenId: data.accountId,
-          modelId: data.taskType === "INSPECTION" ? data.modelId ?? null : null,
-          guildId: channel.id,
-          channelId: section.id,
-          scheduleMode: "IMMEDIATE",
-          defaultTime: "23:30",
-          params: data.taskConfig ?? {},
-        }),
-      ),
-    );
-    return created[0];
+    return api.createTask({
+      type: data.taskType,
+      tokenId: data.accountId,
+      modelId: data.taskType === "INSPECTION" ? data.modelId ?? null : null,
+      guildId: channel.id,
+      channelId: null,
+      scheduleMode: "IMMEDIATE",
+      defaultTime: "23:30",
+      params: data.taskConfig ?? {},
+    });
   },
   async getExecutionRecords(): Promise<ExecutionRecord[]> {
     const [tasks, accounts, channels] = await Promise.all([api.listTasks(), accountLookup(), channelLookup()]);
@@ -449,12 +443,13 @@ export const executionService = {
           id: run.id,
           scheduledTaskId: task.id,
           accountId: task.tokenId,
+          guildId: task.guildId ?? undefined,
           channelId: task.channelId ?? undefined,
           taskType: task.type,
           taskName: taskName(task.type),
           targetLevel: taskTargetLevel(task.type),
           rangeType: "all",
-          sectionIds: task.channelId ? [task.channelId] : [],
+          sectionIds: taskSectionIds(task),
           executionMode: task.scheduleMode === "IMMEDIATE" ? "immediate" : "schedule",
           status: runStatus(run.status),
           startedAt: run.startedAt ?? run.createdAt,

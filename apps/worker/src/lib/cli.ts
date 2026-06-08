@@ -66,6 +66,29 @@ function scrub(text: string, token: string, dotenvPath: string): string {
   return text.split(token).join("<redacted-token>").split(dotenvPath).join("<redacted-dotenv>");
 }
 
+function cliInvocation(args: string[]) {
+  const argv = [config.cliPath, ...config.cliPrefixArgs, ...args];
+  if (process.platform !== "win32") {
+    return { command: config.cliPath, args: [...config.cliPrefixArgs, ...args] };
+  }
+  return {
+    command: "cmd.exe",
+    args: ["/d", "/c", argv.map(escapeCmdArg).join(" ")],
+  };
+}
+
+function escapeCmdArg(value: string) {
+  return value
+    .replace(/\^/g, "^^")
+    .replace(/%/g, "%%")
+    .replace(/&/g, "^&")
+    .replace(/\|/g, "^|")
+    .replace(/</g, "^<")
+    .replace(/>/g, "^>")
+    .replace(/\(/g, "^(")
+    .replace(/\)/g, "^)");
+}
+
 export async function runCliJson<T>(
   token: string,
   args: string[],
@@ -81,7 +104,8 @@ export async function runCliJson<T>(
     await mkdir(profileDir, { recursive: true });
     await writeFile(dotenvPath, `QQ_AI_CONNECT_TOKEN=${token}\n`, { mode: 0o600 });
 
-    const child = spawn(config.cliPath, [...config.cliPrefixArgs, ...args, "--json"], {
+    const cli = cliInvocation([...args, "--json"]);
+    const child = spawn(cli.command, cli.args, {
       cwd: workDir,
       env: {
         ...minimalEnv(),
