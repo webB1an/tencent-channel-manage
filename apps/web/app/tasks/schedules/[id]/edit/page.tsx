@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,6 +11,7 @@ import { Select } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { FieldLabel } from "@/components/patterns";
 import { accountService, taskService, type Account, type ScheduledTask } from "@/lib/domain";
+import { formatTime } from "@/lib/utils";
 
 export default function EditScheduledTaskPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -21,6 +22,9 @@ export default function EditScheduledTaskPage({ params }: { params: { id: string
   const [scheduleType, setScheduleType] = useState<"daily" | "once">("daily");
   const [scheduleAt, setScheduleAt] = useState<Date>(new Date());
   const [accountId, setAccountId] = useState("");
+  const accountIdFieldId = useId();
+  const scheduleTypeFieldId = useId();
+  const scheduleAtFieldId = useId();
 
   useEffect(() => {
     Promise.all([taskService.getScheduledTask(params.id), accountService.getAccountList()])
@@ -46,7 +50,7 @@ export default function EditScheduledTaskPage({ params }: { params: { id: string
         accountId,
         scheduleConfig: {
           type: scheduleType,
-          time: scheduleAt.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false }),
+          time: formatTime(scheduleAt),
           runAt: scheduleType === "once" ? scheduleAt.toISOString() : undefined,
         },
       });
@@ -68,20 +72,20 @@ export default function EditScheduledTaskPage({ params }: { params: { id: string
       <main className="page-shell space-y-4">
         <Card className="space-y-4">
           <div>
-            <FieldLabel required>执行账号</FieldLabel>
-            <Select value={accountId} onChange={setAccountId} options={accounts.map((a) => ({ label: `${a.nickname || a.qq}`, value: a.id }))} title="选择执行账号" placeholder="请选择执行账号" />
+            <FieldLabel htmlFor={accountIdFieldId} required>执行账号</FieldLabel>
+            <Select id={accountIdFieldId} value={accountId} onChange={setAccountId} options={accounts.map((a) => ({ label: `${a.nickname || a.qq}`, value: a.id }))} title="选择执行账号" placeholder="请选择执行账号" />
           </div>
           <div>
             <FieldLabel>执行方式</FieldLabel>
             <p className="text-md text-text-2">定时执行</p>
           </div>
           <div>
-            <FieldLabel>定时规则</FieldLabel>
-            <Select value={scheduleType} onChange={(v) => setScheduleType(v as "daily" | "once")} options={[{ label: "每天", value: "daily" }, { label: "单次", value: "once" }]} />
+            <FieldLabel htmlFor={scheduleTypeFieldId}>定时规则</FieldLabel>
+            <Select id={scheduleTypeFieldId} value={scheduleType} onChange={(v) => setScheduleType(v as "daily" | "once")} options={[{ label: "每天", value: "daily" }, { label: "单次", value: "once" }]} />
           </div>
           <div>
-            <FieldLabel>{scheduleType === "daily" ? "每日执行时间" : "执行日期和时间"}</FieldLabel>
-            <DatePicker value={scheduleAt} onChange={setScheduleAt} mode={scheduleType === "daily" ? "time" : "datetime"} />
+            <FieldLabel htmlFor={scheduleAtFieldId}>{scheduleType === "daily" ? "每日执行时间" : "执行日期和时间"}</FieldLabel>
+            <DatePicker id={scheduleAtFieldId} value={scheduleAt} onChange={setScheduleAt} mode={scheduleType === "daily" ? "time" : "datetime"} />
           </div>
         </Card>
         <Button block size="lg" loading={busy} onClick={save}>保存</Button>

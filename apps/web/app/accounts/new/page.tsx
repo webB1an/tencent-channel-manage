@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,6 +17,10 @@ export default function NewAccountPage() {
   const [nickname, setNickname] = useState("");
   const [remark, setRemark] = useState("");
   const [busy, setBusy] = useState(false);
+  const qqId = useId();
+  const tokenId = useId();
+  const nicknameId = useId();
+  const remarkId = useId();
   const canSave = useMemo(() => qq.trim() && token.trim(), [qq, token]);
 
   async function save() {
@@ -38,20 +42,20 @@ export default function NewAccountPage() {
       <TopBar title="新增账号" />
       <main className="page-shell space-y-4">
         <section>
-          <FieldLabel required>QQ号</FieldLabel>
-          <Input value={qq} onChange={(e) => setQq(e.target.value)} placeholder="请输入 QQ号" />
+          <FieldLabel htmlFor={qqId} required>QQ号</FieldLabel>
+          <Input id={qqId} value={qq} onChange={(e) => setQq(e.target.value)} placeholder="请输入 QQ号" />
         </section>
         <section>
-          <FieldLabel required>Token</FieldLabel>
-          <Textarea value={token} onChange={(e) => setToken(e.target.value)} placeholder="请输入 Token" rows={4} />
+          <FieldLabel htmlFor={tokenId} required>Token</FieldLabel>
+          <Textarea id={tokenId} value={token} onChange={(e) => setToken(e.target.value)} placeholder="请输入 Token" rows={4} />
         </section>
         <section>
-          <FieldLabel>昵称</FieldLabel>
-          <Input value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="方便识别账号,可不填" />
+          <FieldLabel htmlFor={nicknameId}>昵称</FieldLabel>
+          <Input id={nicknameId} value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="方便识别账号,可不填" />
         </section>
         <section>
-          <FieldLabel>备注</FieldLabel>
-          <Textarea value={remark} onChange={(e) => setRemark(e.target.value)} placeholder="自定义备注,可不填" rows={3} />
+          <FieldLabel htmlFor={remarkId}>备注</FieldLabel>
+          <Textarea id={remarkId} value={remark} onChange={(e) => setRemark(e.target.value)} placeholder="自定义备注,可不填" rows={3} />
         </section>
         <Button block size="lg" loading={busy} disabled={!canSave} onClick={save}>保存账号</Button>
       </main>

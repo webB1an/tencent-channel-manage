@@ -18,6 +18,7 @@ export function Select<T extends string = string>({
   placeholder = "请选择",
   title,
   className,
+  id,
 }: {
   value: T | "";
   onChange: (v: T) => void;
@@ -25,6 +26,7 @@ export function Select<T extends string = string>({
   placeholder?: string;
   title?: string;
   className?: string;
+  id?: string;
 }) {
   const [open, setOpen] = useState(false);
   const current = options.find((o) => o.value === value);
@@ -32,6 +34,7 @@ export function Select<T extends string = string>({
     <>
       <button
         type="button"
+        id={id}
         onClick={() => setOpen(true)}
         className={cn(
           "flex h-10 w-full items-center justify-between rounded-md border border-border bg-bg-card px-3 text-left text-md text-text u-press",

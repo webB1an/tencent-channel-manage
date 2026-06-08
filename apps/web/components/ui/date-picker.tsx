@@ -14,6 +14,7 @@ interface DatePickerProps {
   triggerClassName?: string;
   min?: Date;
   buttonLabel?: (v: Date, mode: "datetime" | "date" | "time") => string;
+  id?: string;
 }
 
 function pad(n: number) { return String(n).padStart(2, "0"); }
@@ -23,7 +24,7 @@ function fmt(d: Date, mode: "datetime" | "date" | "time") {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function DatePicker({ value, onChange, mode = "datetime", title = "选择时间", triggerClassName, min, buttonLabel }: DatePickerProps) {
+export function DatePicker({ value, onChange, mode = "datetime", title = "选择时间", triggerClassName, min, buttonLabel, id }: DatePickerProps) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Date>(value);
 
@@ -65,6 +66,7 @@ export function DatePicker({ value, onChange, mode = "datetime", title = "选择
     <>
       <button
         type="button"
+        id={id}
         onClick={() => { setDraft(value); setOpen(true); }}
         className={cn("flex h-10 w-full items-center justify-between rounded-md border border-border bg-bg-card px-3 text-left text-md u-press", triggerClassName)}
       >

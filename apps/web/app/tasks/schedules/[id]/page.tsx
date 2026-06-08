@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { ListRow } from "@/components/ui/list-row";
 import { StatusBadge } from "@/components/patterns";
 import { accountService, channelService, type Account, type Channel, taskService, type ScheduledTask } from "@/lib/domain";
+import { formatShortDate } from "@/lib/utils";
 
 export default function ScheduleDetailPage({ params }: { params: { id: string } }) {
   const [task, setTask] = useState<ScheduledTask | null>(null);
@@ -58,7 +59,7 @@ export default function ScheduleDetailPage({ params }: { params: { id: string } 
           <ListRow title="任务类型" suffix={task.taskType} />
           <ListRow title="执行账号" suffix={accountLabel} />
           <ListRow title="执行频道" suffix={channelLabel} />
-          <ListRow title="创建时间" suffix={task.createdAt || "—"} />
+          <ListRow title="创建时间" suffix={formatShortDate(task.createdAt) || "—"} />
         </section>
       </main>
     </>

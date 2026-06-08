@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -13,6 +13,7 @@ import { TopBar } from "@/components/layout/top-bar";
 import { Card } from "@/components/ui/card";
 import { StepIndicator, TaskTemplateCard, EmptyState, FieldLabel } from "@/components/patterns";
 import { accountService, channelService, executionService, taskService, type Account, type Channel, type RangeType, type Section, type TaskTemplate } from "@/lib/domain";
+import { formatShortDate, formatTime } from "@/lib/utils";
 
 export default function NewTaskPage() {
   const router = useRouter();
@@ -31,6 +32,12 @@ export default function NewTaskPage() {
   const [scheduleAt, setScheduleAt] = useState<Date>(() => nextDefaultTime());
   const [topN, setTopN] = useState("10");
   const [busy, setBusy] = useState(false);
+  const accountIdFieldId = useId();
+  const channelIdFieldId = useId();
+  const rangeTypeFieldId = useId();
+  const scheduleTypeFieldId = useId();
+  const scheduleAtFieldId = useId();
+  const topNFieldId = useId();
 
   const template = useMemo(() => templates.find((t) => t.type === taskType), [templates, taskType]);
   const isChannelTask = template?.targetLevel === "channel";
@@ -112,8 +119,9 @@ export default function NewTaskPage() {
         {step === 1 && (
           <Card className="space-y-4">
             <div>
-              <FieldLabel required>执行账号</FieldLabel>
+              <FieldLabel htmlFor={accountIdFieldId} required>执行账号</FieldLabel>
               <Select
+                id={accountIdFieldId}
                 value={accountId}
                 onChange={setAccountId}
                 options={accounts.map((a) => ({ label: `${a.nickname || a.qq} · ${a.status === "normal" ? "正常" : "异常"}`, value: a.id }))}
@@ -123,16 +131,17 @@ export default function NewTaskPage() {
             </div>
             {isChannelTask && (
               <div>
-                <FieldLabel required>执行频道</FieldLabel>
+                <FieldLabel htmlFor={channelIdFieldId} required>执行频道</FieldLabel>
                 {channels.length === 0 ? <EmptyState title="暂无频道" hint="请先在账号详情刷新频道" /> : (
-                  <Select value={channelId} onChange={setChannelId} options={channels.map((c) => ({ label: c.name, value: c.id }))} title="选择执行频道" placeholder="请选择执行频道" />
+                  <Select id={channelIdFieldId} value={channelId} onChange={setChannelId} options={channels.map((c) => ({ label: c.name, value: c.id }))} title="选择执行频道" placeholder="请选择执行频道" />
                 )}
               </div>
             )}
             {isChannelTask && (
               <div>
-                <FieldLabel>执行范围</FieldLabel>
+                <FieldLabel htmlFor={rangeTypeFieldId}>执行范围</FieldLabel>
                 <Select
+                  id={rangeTypeFieldId}
                   value={rangeType}
                   onChange={(v) => setRangeType(v as RangeType)}
                   options={[{ label: "全频道", value: "all" }, { label: "指定板块", value: "selectedSections", disabled: sections.length === 0 }]}
@@ -163,12 +172,13 @@ export default function NewTaskPage() {
             {executionMode === "schedule" && (
               <>
                 <div>
-                  <FieldLabel>定时规则</FieldLabel>
-                  <Select value={scheduleType} onChange={(v) => setScheduleType(v as "daily" | "once")} options={[{ label: "每天", value: "daily" }, { label: "单次", value: "once" }]} />
+                  <FieldLabel htmlFor={scheduleTypeFieldId}>定时规则</FieldLabel>
+                  <Select id={scheduleTypeFieldId} value={scheduleType} onChange={(v) => setScheduleType(v as "daily" | "once")} options={[{ label: "每天", value: "daily" }, { label: "单次", value: "once" }]} />
                 </div>
                 <div>
-                  <FieldLabel>{scheduleType === "daily" ? "每日执行时间" : "执行日期和时间"}</FieldLabel>
+                  <FieldLabel htmlFor={scheduleAtFieldId}>{scheduleType === "daily" ? "每日执行时间" : "执行日期和时间"}</FieldLabel>
                   <DatePicker
+                    id={scheduleAtFieldId}
                     value={scheduleAt}
                     onChange={setScheduleAt}
                     mode={scheduleType === "daily" ? "time" : "datetime"}
@@ -179,8 +189,8 @@ export default function NewTaskPage() {
             )}
             {template?.targetLevel === "channel" && (
               <div>
-                <FieldLabel>{template.type === "HOT_SUMMARY" ? "汇总数量" : "扫描上限"}</FieldLabel>
-                <Input value={topN} onChange={(e) => setTopN(e.target.value)} type="number" placeholder="10" />
+                <FieldLabel htmlFor={topNFieldId}>{template.type === "HOT_SUMMARY" ? "汇总数量" : "扫描上限"}</FieldLabel>
+                <Input id={topNFieldId} value={topN} onChange={(e) => setTopN(e.target.value)} type="number" placeholder="10" />
               </div>
             )}
           </Card>
@@ -193,7 +203,7 @@ export default function NewTaskPage() {
             <p>执行账号：{accounts.find((a) => a.id === accountId)?.nickname || accountId}</p>
             {isChannelTask && <p>执行频道：{channels.find((c) => c.id === channelId)?.name || channelId}</p>}
             <p>执行范围：{isChannelTask ? (rangeType === "all" ? "全频道" : `指定板块:${sectionIds.length} 个`) : "全账号"}</p>
-            <p>执行方式：{executionMode === "immediate" ? "立即执行" : scheduleType === "daily" ? `每天 ${formatTime(scheduleAt)}` : formatDateTime(scheduleAt)}</p>
+            <p>执行方式：{executionMode === "immediate" ? "立即执行" : scheduleType === "daily" ? `每天 ${formatTime(scheduleAt)}` : formatShortDate(scheduleAt)}</p>
           </Card>
         )}
 
@@ -218,5 +228,3 @@ function nextDefaultTime() {
   if (d.getTime() < Date.now()) d.setDate(d.getDate() + 1);
   return d;
 }
-function formatTime(d: Date) { return d.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false }); }
-function formatDateTime(d: Date) { return d.toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }); }

@@ -10,6 +10,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { TopBar } from "@/components/layout/top-bar";
 import { StatusBadge, TokenText, ChannelCard, EmptyState } from "@/components/patterns";
 import { accountService, channelService, type Account, type Channel } from "@/lib/domain";
+import { formatShortDate } from "@/lib/utils";
 
 export default function AccountDetailPage({ params }: { params: { accountId: string } }) {
   const router = useRouter();
@@ -88,7 +89,7 @@ export default function AccountDetailPage({ params }: { params: { accountId: str
               </div>
               <div className="mt-3 space-y-1 text-sm text-text-2">
                 <p>Token：<TokenText tail={account.tokenTail} /></p>
-                <p>最近运行：{account.lastRunAt || "暂无"}</p>
+                <p>最近运行：{formatShortDate(account.lastRunAt) || "暂无"}</p>
                 {account.remark && <p>备注：{account.remark}</p>}
               </div>
             </section>

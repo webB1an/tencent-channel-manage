@@ -22,8 +22,16 @@ export function formatLocalDate(d: Date = new Date()): string {
   return `${yyyy}-${mm}-${dd} ${day}`;
 }
 
-export function formatShortDate(input: Date | string): string {
+export function formatShortDate(input: Date | string | null | undefined): string {
+  if (input == null) return "";
   const d = typeof input === "string" ? new Date(input) : input;
   if (Number.isNaN(d.getTime())) return typeof input === "string" ? input : "";
   return d.toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+}
+
+export function formatTime(input: Date | string | null | undefined): string {
+  if (input == null) return "";
+  const d = typeof input === "string" ? new Date(input) : input;
+  if (Number.isNaN(d.getTime())) return typeof input === "string" ? input : "";
+  return d.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false });
 }
